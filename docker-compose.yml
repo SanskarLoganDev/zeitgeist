@@ -1,0 +1,42 @@
+# Local development docker-compose
+# Brings up Postgres only — Django runs on the host machine (python manage.py runserver)
+# This keeps the dev loop fast: change Python code, server auto-reloads, no container rebuild.
+#
+# Usage:
+#   docker-compose up -d          # start Postgres in background
+#   docker-compose down           # stop and remove containers
+#   docker-compose down -v        # also wipe the database volume
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: zeitgeist
+      POSTGRES_USER: zeitgeist
+      POSTGRES_PASSWORD: zeitgeist_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U zeitgeist"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ── Phase 2: Redis cache ──────────────────────────────────────────────────
+  # Uncomment when Memorystore (Redis) is added in Phase 2
+  # redis:
+  #   image: redis:7-alpine
+  #   restart: unless-stopped
+  #   ports:
+  #     - "6379:6379"
+  #   healthcheck:
+  #     test: ["CMD", "redis-cli", "ping"]
+  #     interval: 5s
+  #     timeout: 5s
+  #     retries: 5
+
+volumes:
+  postgres_data:

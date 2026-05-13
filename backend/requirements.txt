@@ -1,0 +1,28 @@
+# ── Core ──────────────────────────────────────────────────────────────────────
+Django==5.1.*
+djangorestframework==3.15.*
+django-cors-headers==4.4.*
+psycopg2-binary==2.9.*          # Postgres driver
+gunicorn==22.*                  # WSGI server for Cloud Run
+
+# ── Auth ──────────────────────────────────────────────────────────────────────
+PyJWT==2.9.*                    # JWT issuance and validation
+google-auth==2.*                # Google OAuth token verification
+
+# ── Data ingestion — Phase 1 ──────────────────────────────────────────────────
+praw==7.*                       # Reddit API (Python Reddit API Wrapper)
+requests==2.32.*                # HTTP client for HN + misc APIs
+
+# ── Data ingestion — Phase 2 ─────────────────────────────────────────────────
+# google-api-python-client==2.*  # YouTube Data API   (uncomment Phase 2)
+# pytrends==4.*                  # Google Trends      (uncomment Phase 2)
+# tmdbsimple==2.*                # TMDB API           (uncomment Phase 2)
+
+# ── AI — Phase 2 ─────────────────────────────────────────────────────────────
+# google-cloud-aiplatform==1.*   # Vertex AI SDK      (uncomment Phase 2)
+
+# ── Observability ────────────────────────────────────────────────────────────
+python-json-logger==2.*         # Structured JSON logs for Cloud Logging
+
+# ── Dev utils ────────────────────────────────────────────────────────────────
+python-dotenv==1.*              # Load .env in development
