@@ -8,59 +8,54 @@
 # USED BY:
 #   GitHub — triggered automatically on push/PR events.
 #   Developers — check this passes before merging any PR.
-#   The CD pipeline (cd.yml) — indirectly, because CD only runs on main,
-#   and you should only merge to main when CI is green.
+#
+# ACTION VERSIONS — all pinned to versions that natively run on Node.js 24:
+#   actions/checkout@v4      → v4.2.2+ backported Node.js 24, v6 is latest
+#                              Using v4 as it's stable and widely tested.
+#                              Upgrade to v6 when ready (breaking: credential storage changed)
+#   actions/setup-python@v5  → Node.js 24 native
+#   google-github-actions/auth is NOT used in CI — only in CD
 # ─────────────────────────────────────────────────────────────────────────────
 
-# The name shown in the GitHub Actions tab in your repo
 name: CI — lint, type check, test
 
-# ── When to run this workflow ─────────────────────────────────────────────────
 on:
   push:
-    branches: ["**"]    # Run on pushes to ALL branches (feat/*, fix/*, main, etc.)
+    branches: ["**"]
   pull_request:
-    branches: [main]    # Also run when a PR is opened/updated targeting main
+    branches: [main]
 
-# ── Jobs ──────────────────────────────────────────────────────────────────────
-# A workflow contains one or more jobs. Jobs run in parallel by default.
-# We only have one job here: backend-ci.
 jobs:
   backend-ci:
-    name: Backend CI          # Label shown in the GitHub Actions UI
-    runs-on: ubuntu-latest    # The type of virtual machine GitHub spins up to run this.
-                              # ubuntu-latest is the standard choice — it's fast and free.
+    name: Backend CI
+    runs-on: ubuntu-latest
 
-    # ── Working directory ──────────────────────────────────────────────────────
-    # All `run:` commands below will execute from the backend/ folder
-    # so we don't have to prefix every command with `cd backend &&`
     defaults:
       run:
         working-directory: backend
 
-    # ── Services ──────────────────────────────────────────────────────────────
-    # Services are Docker containers that start alongside the job.
-    # We need a real Postgres database for Django's test runner.
-    # GitHub Actions spins up this container automatically before the job starts.
+    # ── Postgres service container ─────────────────────────────────────────────
+    # GitHub Actions spins this up alongside the job.
+    # Django needs a real database to run migrations and tests against.
     services:
       postgres:
-        image: postgres:16          # Same version as production (Cloud SQL)
+        image: postgres:16
         env:
           POSTGRES_DB: zeitgeist_test
           POSTGRES_USER: zeitgeist
           POSTGRES_PASSWORD: test_password
         ports:
-          - 5432:5432               # Expose Postgres on localhost:5432 inside the runner
+          - 5432:5432
         options: >-
-          --health-cmd pg_isready   # Don't start the job until Postgres is actually ready.
-          --health-interval 10s     # Check every 10 seconds.
-          --health-timeout 5s       # Fail a check if it takes more than 5 seconds.
-          --health-retries 5        # After 5 failed checks, mark the service as unhealthy.
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
-    # ── Environment variables ─────────────────────────────────────────────────
-    # These are available to all `run:` steps below, like os.environ in Python.
-    # In CI we use dummy values for API credentials — we're not actually calling
-    # Reddit or Google, just running Django's startup and test suite.
+    # ── Environment variables ──────────────────────────────────────────────────
+    # Injected directly — no .env file in CI.
+    # load_dotenv() in development.py is a no-op when vars are already set.
+    # Dummy values for Reddit/Google — tests never actually call those APIs.
     env:
       DJANGO_SETTINGS_MODULE: config.settings.development
       DJANGO_SECRET_KEY: ci-test-secret-key-not-used-in-production-min-50-chars
@@ -69,67 +64,51 @@ jobs:
       DB_PASSWORD: test_password
       DB_HOST: localhost
       DB_PORT: "5432"
-      REDDIT_CLIENT_ID: dummy     # Django reads this from os.environ at startup.
-      REDDIT_CLIENT_SECRET: dummy # Dummy values prevent KeyError — tests don't call Reddit.
+      REDDIT_CLIENT_ID: dummy
+      REDDIT_CLIENT_SECRET: dummy
+      REDDIT_USER_AGENT: zeitgeist/0.1 by ci
       GOOGLE_CLIENT_ID: dummy
       GOOGLE_CLIENT_SECRET: dummy
 
-    # ── Steps ─────────────────────────────────────────────────────────────────
-    # Steps run sequentially. If any step fails (non-zero exit code),
-    # all subsequent steps are skipped and the job is marked failed.
     steps:
 
-      # Step 1: Check out the repository code onto the GitHub runner machine.
-      # Without this, the runner has no files to work with.
+      # ── Step 1: Check out code ─────────────────────────────────────────────
+      # v4 — stable, Node.js 24 compatible via backport in v4.2.2+
       - uses: actions/checkout@v4
-        # `uses` means "run this pre-built Action from the GitHub Actions marketplace"
-        # actions/checkout is maintained by GitHub — it clones your repo.
-        # @v4 is the version — always pin to a version, never use @latest.
 
-      # Step 2: Install Python 3.12 on the runner.
-      # The ubuntu-latest runner has Python pre-installed but we pin the version
-      # to match production (which uses python:3.12-slim in the Dockerfile).
+      # ── Step 2: Install Python 3.12 ───────────────────────────────────────
+      # v5 — natively runs on Node.js 24
+      # Pins to 3.12 to match python:3.12-slim in the Dockerfile.
+      # cache: pip speeds up installs when requirements files haven't changed.
       - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-          cache: pip    # Cache pip's download cache between runs. Speeds up install
-                        # by ~30 seconds if requirements.txt hasn't changed.
+          cache: pip
 
-      # Step 3: Install all Python dependencies (including dev/test ones).
-      # requirements-dev.txt includes requirements.txt via -r requirements.txt.
+      # ── Step 3: Install dependencies ──────────────────────────────────────
+      # requirements-dev.txt includes requirements.txt via -r.
       - name: Install dependencies
         run: pip install -r requirements-dev.txt
-        # `run` executes a shell command on the runner.
-        # This is equivalent to typing this in your terminal.
 
-      # Step 4: Run ruff linter.
-      # ruff is extremely fast (written in Rust). It checks for:
-      #   - syntax errors
-      #   - unused imports
-      #   - style violations (configured in pyproject.toml)
-      # Exit code 1 if any issues found → step fails → job fails → no deploy.
+      # ── Step 4: Lint with ruff ─────────────────────────────────────────────
+      # Checks code style and unused imports. Config in pyproject.toml.
       - name: Lint (ruff)
         run: ruff check .
 
-      # Step 5: Run mypy type checker.
-      # mypy reads type annotations and finds type errors that Python won't
-      # catch at runtime (e.g. passing a str where an int is expected).
-      # Configured in pyproject.toml with strict=true.
+      # ── Step 5: Type check with mypy ──────────────────────────────────────
+      # Reads type annotations, catches type errors at CI time not runtime.
       - name: Type check (mypy)
         run: mypy apps config
 
-      # Step 6: Apply database migrations against the test Postgres container.
-      # This ensures all migration files are valid and the schema is correct
-      # before running tests. If a migration is broken, this step fails here
-      # rather than silently corrupting a real database.
+      # ── Step 6: Run migrations ────────────────────────────────────────────
+      # Applies all migration files against the CI Postgres container.
+      # Catches broken migrations before they reach production.
       - name: Run migrations
         run: python manage.py migrate
 
-      # Step 7: Run the test suite with pytest.
-      # pytest is configured in pyproject.toml:
-      #   - DJANGO_SETTINGS_MODULE=config.settings.development
-      #   - Coverage threshold: 70% (fails if coverage drops below)
-      #   - Discovers all test_*.py files automatically
+      # ── Step 7: Run tests ─────────────────────────────────────────────────
+      # pytest discovers test_*.py files and checks coverage threshold.
+      # Config in pyproject.toml [tool.pytest.ini_options].
       - name: Run tests
         run: pytest

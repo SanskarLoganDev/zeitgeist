@@ -1,97 +1,88 @@
 # .github/workflows/cd.yml
 # ─────────────────────────────────────────────────────────────────────────────
 # PURPOSE:
-#   Continuous Deployment pipeline. Runs ONLY when code is merged (pushed) to
-#   the main branch. It builds Docker images, pushes them to GCP Artifact
-#   Registry, runs database migrations safely, deploys both the API server and
-#   ingestion job to Cloud Run, then verifies the deployment with a smoke test.
+#   Continuous Deployment pipeline. Runs ONLY on pushes to main.
+#   Builds Docker images, pushes to GCP Artifact Registry, runs database
+#   migrations safely, deploys to Cloud Run, smoke tests the deployment.
 #
-# USED BY:
-#   GitHub — triggered automatically on push to main.
-#   Only runs after a PR is merged — you never push directly to main.
+# CURRENT STATUS:
+#   The deploy steps will fail until GCP is configured:
+#     - terraform apply run
+#     - Secrets set in Secret Manager
+#     - GitHub Actions secrets added to the repo
+#   This is expected and harmless before GCP setup is complete.
 #
-# REQUIRES (GitHub repo → Settings → Secrets → Actions):
-#   GCP_PROJECT_ID              : your GCP project ID
-#   GCP_WORKLOAD_IDENTITY_PROVIDER : Workload Identity Federation provider name
-#   GCP_DEPLOY_SA_EMAIL         : service account used by GitHub Actions to deploy
-#   GCP_APP_SA_EMAIL            : service account the running Cloud Run services use
-#   CLOUD_SQL_CONNECTION_NAME   : from `terraform output cloud_sql_connection_name`
+# GITHUB SECRETS REQUIRED (repo → Settings → Secrets → Actions):
+#   GCP_PROJECT_ID                 : your GCP project ID
+#   GCP_WORKLOAD_IDENTITY_PROVIDER : WIF provider resource name
+#   GCP_DEPLOY_SA_EMAIL            : service account GitHub Actions impersonates
+#   GCP_APP_SA_EMAIL               : service account Cloud Run services run as
+#   CLOUD_SQL_CONNECTION_NAME      : from `terraform output cloud_sql_connection_name`
 #
-# WHY WORKLOAD IDENTITY FEDERATION (WIF) INSTEAD OF A JSON KEY?
-#   The traditional approach stores a GCP service account JSON key in GitHub Secrets.
-#   That key is a long-lived credential — if it leaks, an attacker has permanent access.
-#   WIF exchanges GitHub's short-lived OIDC token (valid for 1 job run only) for a
-#   short-lived GCP access token. Nothing to leak, nothing to rotate, nothing to expire.
+# ACTION VERSIONS — all natively run on Node.js 24, no workarounds needed:
+#   actions/checkout@v4                  — v4.2.2+ Node.js 24 compatible
+#   google-github-actions/auth@v3        — Node.js 24 native (upgraded from v2)
+#   google-github-actions/setup-gcloud@v2 — stable, Node.js 24 compatible
+#
+# WHY WORKLOAD IDENTITY FEDERATION (not a JSON key):
+#   WIF exchanges GitHub's short-lived OIDC token for a short-lived GCP token.
+#   Nothing to leak, nothing to rotate. No JSON key stored anywhere.
 # ─────────────────────────────────────────────────────────────────────────────
 
 name: CD — build, push, deploy to Cloud Run
 
-# ── When to run ───────────────────────────────────────────────────────────────
 on:
   push:
-    branches: [main]    # ONLY on pushes to main (i.e. when a PR is merged)
+    branches: [main]
 
-# ── Permissions ───────────────────────────────────────────────────────────────
-# GitHub Actions needs these permissions to request an OIDC token for WIF.
-# contents: read  → read the repository code (needed for checkout)
-# id-token: write → request an OIDC token from GitHub to exchange with GCP
 permissions:
   contents: read
-  id-token: write
-
-# ── Global environment variables ─────────────────────────────────────────────
-# Available to all steps in all jobs.
-# ${{ secrets.X }} reads from GitHub repo Secrets — never visible in logs.
-env:
-  GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-  GCP_REGION: us-central1
-  REGISTRY: us-central1-docker.pkg.dev      # Artifact Registry hostname for this region
-  REPO: ${{ secrets.GCP_PROJECT_ID }}/zeitgeist  # <project-id>/zeitgeist inside the registry
+  id-token: write    # Required for Workload Identity Federation OIDC token
 
 jobs:
   deploy:
     name: Build → Push → Deploy
     runs-on: ubuntu-latest
 
+    env:
+      GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+      GCP_REGION: us-central1
+      REGISTRY: us-central1-docker.pkg.dev
+      REPO: ${{ secrets.GCP_PROJECT_ID }}/zeitgeist
+
     steps:
 
-      # ── Step 1: Check out the code ──────────────────────────────────────────
-      # Same as CI — clones the repo onto the runner so we can build Docker images.
+      # ── Step 1: Check out code ─────────────────────────────────────────────
+      # v4 — stable, Node.js 24 compatible via backport in v4.2.2+
       - uses: actions/checkout@v4
 
-      # ── Step 2: Authenticate to GCP via Workload Identity Federation ─────────
-      # This step exchanges the GitHub OIDC token for a short-lived GCP access token.
-      # After this step, all `gcloud` and `docker` commands are authenticated to GCP.
-      # No JSON key is stored anywhere.
+      # ── Step 2: Authenticate to GCP via Workload Identity Federation ───────
+      # google-github-actions/auth@v3 — natively runs on Node.js 24.
+      # Upgraded from v2 which used Node.js 20.
+      # Exchanges the GitHub OIDC token for a short-lived GCP access token.
+      # After this step, all gcloud and docker push commands are authenticated.
       - name: Authenticate to GCP
-        uses: google-github-actions/auth@v2
+        uses: google-github-actions/auth@v3
         with:
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-          # Format: projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/POOL/providers/PROVIDER
           service_account: ${{ secrets.GCP_DEPLOY_SA_EMAIL }}
-          # The service account GitHub Actions impersonates for this deployment.
-          # It needs roles: run.developer, storage.admin, artifactregistry.writer
 
-      # ── Step 3: Install the Google Cloud SDK (gcloud CLI) ────────────────────
-      # Provides the `gcloud` command used in later steps to deploy to Cloud Run.
+      # ── Step 3: Install gcloud CLI ─────────────────────────────────────────
+      # google-github-actions/setup-gcloud@v2 — stable, Node.js 24 compatible.
+      # Provides the `gcloud` command used in later deploy steps.
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
-      # ── Step 4: Configure Docker to push to Artifact Registry ────────────────
-      # Docker needs credentials to push images to GCP's container registry.
-      # This command tells Docker to use gcloud's credentials for our registry host.
+      # ── Step 4: Configure Docker to push to Artifact Registry ──────────────
+      # Tells Docker to use gcloud credentials for our registry hostname.
       - name: Configure Docker for Artifact Registry
         run: gcloud auth configure-docker ${{ env.REGISTRY }} --quiet
-        # --quiet suppresses the interactive confirmation prompt
 
-      # ── Step 5: Build the API server Docker image ─────────────────────────────
-      # Builds backend/Dockerfile — the multi-stage image for the Django API server.
-      # Tagged with TWO tags:
-      #   :${{ github.sha }}  — the exact git commit SHA (e.g. :a3f9c12...)
-      #                         Immutable. Used for the actual Cloud Run deployment
-      #                         so we always know exactly which commit is live.
-      #   :latest             — mutable pointer to the most recent build.
-      #                         Used for convenience (e.g. local pulls).
+      # ── Step 5: Build API server image ─────────────────────────────────────
+      # Builds backend/Dockerfile — the Django API server image.
+      # Tagged with:
+      #   :${{ github.sha }} — immutable, tied to exact commit, used for deploy
+      #   :latest            — mutable pointer, used for convenience
       - name: Build API image
         working-directory: backend
         run: |
@@ -101,17 +92,15 @@ jobs:
             --file Dockerfile \
             .
 
-      # ── Step 6: Push the API image to Artifact Registry ──────────────────────
-      # Uploads both tags. The registry stores the image; Cloud Run pulls from it.
+      # ── Step 6: Push API image ─────────────────────────────────────────────
       - name: Push API image
         run: |
           docker push ${{ env.REGISTRY }}/${{ env.REPO }}/api:${{ github.sha }}
           docker push ${{ env.REGISTRY }}/${{ env.REPO }}/api:latest
 
-      # ── Step 7: Build the ingestion job Docker image ──────────────────────────
-      # Builds backend/Dockerfile.job — the separate image for the ingestion job.
-      # Kept separate from the API image so a broken ingestion deploy cannot
-      # take down the API server. They are independent Cloud Run services.
+      # ── Step 7: Build ingestion job image ───────────────────────────────────
+      # Separate image — uses Dockerfile.job.
+      # A broken ingestion deploy cannot take down the running API server.
       - name: Build ingestion job image
         working-directory: backend
         run: |
@@ -121,29 +110,22 @@ jobs:
             --file Dockerfile.job \
             .
 
-      # ── Step 8: Push the ingestion job image ──────────────────────────────────
+      # ── Step 8: Push ingestion job image ────────────────────────────────────
       - name: Push ingestion job image
         run: |
           docker push ${{ env.REGISTRY }}/${{ env.REPO }}/job:${{ github.sha }}
           docker push ${{ env.REGISTRY }}/${{ env.REPO }}/job:latest
 
-      # ── Step 9: Run database migrations BEFORE switching traffic ─────────────
-      # This is a critical safety step. The sequence is:
-      #   1. New image is built (may contain new migration files)
-      #   2. Migrations run against the live database (this step)
-      #   3. Only THEN does traffic switch to the new image (step 10)
+      # ── Step 9: Run database migrations BEFORE switching traffic ────────────
+      # Safety sequence:
+      #   1. New image built (may contain new migration files)
+      #   2. Migrations run against live DB here — blocks until complete
+      #   3. Only then does traffic shift to new revision (Step 10)
       #
-      # Why run migrations separately as a Cloud Run Job?
-      #   If migrations ran inside the API container at startup, two problems arise:
-      #     a) Two containers starting simultaneously both try to run migrations → race condition
-      #     b) If migrations fail mid-way, the API is already serving traffic against a broken schema
-      #   Running as a one-off Cloud Run Job with --wait blocks this workflow until
-      #   migrations succeed before we touch the running service.
-      #
-      # gcloud run jobs create creates a one-off migration job then executes it.
-      # --execute-now  : run it immediately
-      # --wait         : block this step until the job completes (success or failure)
-      # If the job exits non-zero, this step fails and the deploy stops — safe.
+      # Why a Cloud Run Job, not running migrate at container startup?
+      #   - Two containers starting simultaneously would race to migrate
+      #   - If migrations fail, the API is NOT serving new code yet → safe
+      #   --execute-now --wait blocks this step until job completes or fails
       - name: Run database migrations
         run: |
           gcloud run jobs create zeitgeist-migrate-${{ github.run_number }} \
@@ -160,15 +142,12 @@ jobs:
             --execute-now \
             --wait
 
-      # ── Step 10: Deploy the new API image to Cloud Run ────────────────────────
-      # `gcloud run services update` tells Cloud Run to create a new revision
-      # using the new image. Cloud Run performs a zero-downtime rolling update:
-      #   - Starts new containers with the new image
-      #   - Waits until they pass the startup probe (GET /api/v1/health/)
-      #   - Shifts traffic to the new containers
-      #   - Terminates the old containers
-      # If the new containers fail the startup probe, Cloud Run automatically
-      # keeps serving the previous revision — no downtime even on bad deploys.
+      # ── Step 10: Deploy API to Cloud Run ────────────────────────────────────
+      # Zero-downtime rolling update:
+      #   - Cloud Run starts containers with the new image
+      #   - Waits until startup probe passes (GET /api/v1/health/)
+      #   - Shifts 100% traffic to new revision
+      #   - If probe fails, old revision keeps serving — no downtime
       - name: Deploy API to Cloud Run
         run: |
           gcloud run services update zeitgeist-api \
@@ -176,11 +155,10 @@ jobs:
             --region ${{ env.GCP_REGION }} \
             --project ${{ env.GCP_PROJECT_ID }}
 
-      # ── Step 11: Update the ingestion job image ────────────────────────────────
-      # The ingestion job is a Cloud Run Job, not a Service.
-      # `gcloud run jobs update` updates the job definition with the new image.
-      # The job doesn't run here — it still runs on the Cloud Scheduler trigger at 3am UTC.
-      # This just ensures that the NEXT time Cloud Scheduler fires, it uses the new image.
+      # ── Step 11: Update ingestion job image ─────────────────────────────────
+      # Updates the job definition only — does NOT execute the job.
+      # Cloud Scheduler still triggers it at 03:00 UTC.
+      # Next trigger will use this new image.
       - name: Update ingestion job image
         run: |
           gcloud run jobs update zeitgeist-ingest \
@@ -188,14 +166,10 @@ jobs:
             --region ${{ env.GCP_REGION }} \
             --project ${{ env.GCP_PROJECT_ID }}
 
-      # ── Step 12: Smoke test ────────────────────────────────────────────────────
-      # After deploying, verify the live API is actually responding correctly.
-      # Steps:
-      #   1. Ask gcloud for the Cloud Run service URL
-      #   2. Hit /api/v1/health/ with curl
-      #   3. If we get anything other than 200, fail the step
-      # Note: Cloud Run still serves the PREVIOUS revision if the new one didn't start.
-      # A 200 here confirms the NEW revision is up and the health check passes.
+      # ── Step 12: Smoke test ─────────────────────────────────────────────────
+      # Hits the live health check after deployment.
+      # 200 = new revision is up and serving correctly.
+      # Non-200 = Cloud Run continues serving previous revision.
       - name: Smoke test — health check
         run: |
           API_URL=$(gcloud run services describe zeitgeist-api \
@@ -206,8 +180,7 @@ jobs:
           STATUS=$(curl --silent --output /dev/null --write-out "%{http_code}" "$API_URL/api/v1/health/")
           echo "Health check HTTP status: $STATUS"
           if [ "$STATUS" != "200" ]; then
-            echo "ERROR: Health check failed with status $STATUS"
-            echo "Cloud Run will continue serving the previous revision."
+            echo "ERROR: Health check failed — Cloud Run serving previous revision"
             exit 1
           fi
-          echo "SUCCESS: Deployment complete and healthy."
+          echo "SUCCESS: Deployment complete and healthy"
