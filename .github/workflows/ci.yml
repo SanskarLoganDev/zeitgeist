@@ -9,12 +9,16 @@
 #   GitHub — triggered automatically on push/PR events.
 #   Developers — check this passes before merging any PR.
 #
-# ACTION VERSIONS — all pinned to versions that natively run on Node.js 24:
-#   actions/checkout@v4      → v4.2.2+ backported Node.js 24, v6 is latest
-#                              Using v4 as it's stable and widely tested.
-#                              Upgrade to v6 when ready (breaking: credential storage changed)
-#   actions/setup-python@v5  → Node.js 24 native
-#   google-github-actions/auth is NOT used in CI — only in CD
+# ACTION VERSIONS:
+#   actions/checkout@v4     — v4.2.2+ backported Node.js 24 compatibility
+#   actions/setup-python@v5 — natively runs on Node.js 24
+#
+# NODE.JS 24 NOTE:
+#   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 is set at the workflow level.
+#   This is the opt-in mechanism recommended by GitHub while the Actions
+#   ecosystem migrates from Node.js 20 to Node.js 24.
+#   Reference: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+#   Remove this env block once GitHub makes Node.js 24 the default (June 2026).
 # ─────────────────────────────────────────────────────────────────────────────
 
 name: CI — lint, type check, test
@@ -24,6 +28,11 @@ on:
     branches: ["**"]
   pull_request:
     branches: [main]
+
+# Opt into Node.js 24 runtime for all JavaScript-based actions in this workflow.
+# GitHub recommends this as the correct migration path — not a workaround.
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   backend-ci:
@@ -73,11 +82,9 @@ jobs:
     steps:
 
       # ── Step 1: Check out code ─────────────────────────────────────────────
-      # v4 — stable, Node.js 24 compatible via backport in v4.2.2+
       - uses: actions/checkout@v4
 
       # ── Step 2: Install Python 3.12 ───────────────────────────────────────
-      # v5 — natively runs on Node.js 24
       # Pins to 3.12 to match python:3.12-slim in the Dockerfile.
       # cache: pip speeds up installs when requirements files haven't changed.
       - name: Set up Python 3.12
@@ -87,28 +94,21 @@ jobs:
           cache: pip
 
       # ── Step 3: Install dependencies ──────────────────────────────────────
-      # requirements-dev.txt includes requirements.txt via -r.
       - name: Install dependencies
         run: pip install -r requirements-dev.txt
 
       # ── Step 4: Lint with ruff ─────────────────────────────────────────────
-      # Checks code style and unused imports. Config in pyproject.toml.
       - name: Lint (ruff)
         run: ruff check .
 
       # ── Step 5: Type check with mypy ──────────────────────────────────────
-      # Reads type annotations, catches type errors at CI time not runtime.
       - name: Type check (mypy)
         run: mypy apps config
 
       # ── Step 6: Run migrations ────────────────────────────────────────────
-      # Applies all migration files against the CI Postgres container.
-      # Catches broken migrations before they reach production.
       - name: Run migrations
         run: python manage.py migrate
 
       # ── Step 7: Run tests ─────────────────────────────────────────────────
-      # pytest discovers test_*.py files and checks coverage threshold.
-      # Config in pyproject.toml [tool.pytest.ini_options].
       - name: Run tests
         run: pytest

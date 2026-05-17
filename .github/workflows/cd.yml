@@ -19,14 +19,15 @@
 #   GCP_APP_SA_EMAIL               : service account Cloud Run services run as
 #   CLOUD_SQL_CONNECTION_NAME      : from `terraform output cloud_sql_connection_name`
 #
-# ACTION VERSIONS — all natively run on Node.js 24, no workarounds needed:
-#   actions/checkout@v4                  — v4.2.2+ Node.js 24 compatible
-#   google-github-actions/auth@v3        — Node.js 24 native (upgraded from v2)
+# ACTION VERSIONS:
+#   actions/checkout@v4              — v4.2.2+ Node.js 24 compatible
+#   google-github-actions/auth@v3    — natively runs on Node.js 24 (upgraded from v2)
 #   google-github-actions/setup-gcloud@v2 — stable, Node.js 24 compatible
 #
-# WHY WORKLOAD IDENTITY FEDERATION (not a JSON key):
-#   WIF exchanges GitHub's short-lived OIDC token for a short-lived GCP token.
-#   Nothing to leak, nothing to rotate. No JSON key stored anywhere.
+# NODE.JS 24 NOTE:
+#   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 is set at the workflow level.
+#   GitHub's recommended opt-in for Node.js 24 migration.
+#   Remove once GitHub makes Node.js 24 the default (June 2026).
 # ─────────────────────────────────────────────────────────────────────────────
 
 name: CD — build, push, deploy to Cloud Run
@@ -34,6 +35,10 @@ name: CD — build, push, deploy to Cloud Run
 on:
   push:
     branches: [main]
+
+# Opt into Node.js 24 runtime for all JavaScript-based actions in this workflow.
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 permissions:
   contents: read
@@ -53,7 +58,6 @@ jobs:
     steps:
 
       # ── Step 1: Check out code ─────────────────────────────────────────────
-      # v4 — stable, Node.js 24 compatible via backport in v4.2.2+
       - uses: actions/checkout@v4
 
       # ── Step 2: Authenticate to GCP via Workload Identity Federation ───────
@@ -68,21 +72,17 @@ jobs:
           service_account: ${{ secrets.GCP_DEPLOY_SA_EMAIL }}
 
       # ── Step 3: Install gcloud CLI ─────────────────────────────────────────
-      # google-github-actions/setup-gcloud@v2 — stable, Node.js 24 compatible.
-      # Provides the `gcloud` command used in later deploy steps.
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
       # ── Step 4: Configure Docker to push to Artifact Registry ──────────────
-      # Tells Docker to use gcloud credentials for our registry hostname.
       - name: Configure Docker for Artifact Registry
         run: gcloud auth configure-docker ${{ env.REGISTRY }} --quiet
 
       # ── Step 5: Build API server image ─────────────────────────────────────
-      # Builds backend/Dockerfile — the Django API server image.
       # Tagged with:
       #   :${{ github.sha }} — immutable, tied to exact commit, used for deploy
-      #   :latest            — mutable pointer, used for convenience
+      #   :latest            — mutable pointer for convenience
       - name: Build API image
         working-directory: backend
         run: |
@@ -99,8 +99,8 @@ jobs:
           docker push ${{ env.REGISTRY }}/${{ env.REPO }}/api:latest
 
       # ── Step 7: Build ingestion job image ───────────────────────────────────
-      # Separate image — uses Dockerfile.job.
-      # A broken ingestion deploy cannot take down the running API server.
+      # Separate image from the API server — uses Dockerfile.job.
+      # A broken ingestion deploy cannot take down the running API.
       - name: Build ingestion job image
         working-directory: backend
         run: |
@@ -118,14 +118,10 @@ jobs:
 
       # ── Step 9: Run database migrations BEFORE switching traffic ────────────
       # Safety sequence:
-      #   1. New image built (may contain new migration files)
-      #   2. Migrations run against live DB here — blocks until complete
-      #   3. Only then does traffic shift to new revision (Step 10)
-      #
-      # Why a Cloud Run Job, not running migrate at container startup?
-      #   - Two containers starting simultaneously would race to migrate
-      #   - If migrations fail, the API is NOT serving new code yet → safe
-      #   --execute-now --wait blocks this step until job completes or fails
+      #   1. New image built (may have new migrations)
+      #   2. Migrations run here — blocks until complete
+      #   3. Only then does traffic shift to new revision
+      # --execute-now --wait blocks this step until success or failure.
       - name: Run database migrations
         run: |
           gcloud run jobs create zeitgeist-migrate-${{ github.run_number }} \
@@ -143,11 +139,8 @@ jobs:
             --wait
 
       # ── Step 10: Deploy API to Cloud Run ────────────────────────────────────
-      # Zero-downtime rolling update:
-      #   - Cloud Run starts containers with the new image
-      #   - Waits until startup probe passes (GET /api/v1/health/)
-      #   - Shifts 100% traffic to new revision
-      #   - If probe fails, old revision keeps serving — no downtime
+      # Zero-downtime rolling update — Cloud Run waits for the startup probe
+      # (GET /api/v1/health/) before shifting traffic to the new revision.
       - name: Deploy API to Cloud Run
         run: |
           gcloud run services update zeitgeist-api \
@@ -156,9 +149,8 @@ jobs:
             --project ${{ env.GCP_PROJECT_ID }}
 
       # ── Step 11: Update ingestion job image ─────────────────────────────────
-      # Updates the job definition only — does NOT execute the job.
-      # Cloud Scheduler still triggers it at 03:00 UTC.
-      # Next trigger will use this new image.
+      # Updates the job definition only — does NOT run it.
+      # Cloud Scheduler still triggers it at 03:00 UTC as before.
       - name: Update ingestion job image
         run: |
           gcloud run jobs update zeitgeist-ingest \
@@ -167,9 +159,7 @@ jobs:
             --project ${{ env.GCP_PROJECT_ID }}
 
       # ── Step 12: Smoke test ─────────────────────────────────────────────────
-      # Hits the live health check after deployment.
-      # 200 = new revision is up and serving correctly.
-      # Non-200 = Cloud Run continues serving previous revision.
+      # 200 = new revision up and serving. Non-200 = Cloud Run keeps old revision.
       - name: Smoke test — health check
         run: |
           API_URL=$(gcloud run services describe zeitgeist-api \
