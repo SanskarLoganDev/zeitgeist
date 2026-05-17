@@ -17,9 +17,9 @@ Used by : Django admin panel — loaded automatically by Django at startup
 
 Phase    : 1 — Week 2 (register models as soon as they exist)
 """
-from django.contrib import admin
 
 # Phase 1 Week 2 — uncomment as models are implemented:
+# from django.contrib import admin
 # from .models import Category, SubredditConfig, CategorySourceConfig, UserCategoryPreference
 # admin.site.register(Category)
 # admin.site.register(SubredditConfig)

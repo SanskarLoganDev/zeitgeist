@@ -6,8 +6,11 @@ pytest-django==4.*
 pytest-cov==5.*
 factory-boy==3.*                # Model factories for tests
 
-# ── Linting + type checking ───────────────────────────────────────────────────
-ruff==0.5.*
-mypy==1.11.*
-django-stubs==5.*
+# ── Linting ───────────────────────────────────────────────────────────────────
+ruff==0.9.*                     # Upgraded from 0.5 — supports [tool.ruff.lint] syntax cleanly
+
+# ── Type checking ─────────────────────────────────────────────────────────────
+# Pin compatible versions — django-stubs 5.x requires mypy 1.x
+mypy==1.14.*
+django-stubs[compatible-mypy]==5.*   # [compatible-mypy] auto-pins the right mypy version
 djangorestframework-stubs==3.*

@@ -12,9 +12,10 @@ Purpose : Shared Django settings used in ALL environments (development and produ
           backend/.env by development.py via python-dotenv.
 
 Used by : config/settings/development.py  — imports everything via `from .base import *`
-          config/settings/wsgi.py         — loaded at production startup
-          config/settings/run_job.py      — loaded by ingestion job at startup
-          manage.py                       — sets DJANGO_SETTINGS_MODULE to development
+          config/settings/production.py   — imports everything via `from .base import *`
+          config/wsgi.py                  — loaded at production API server startup
+          run_job.py                      — loaded by ingestion job at startup
+          manage.py                       — defaults to development settings
           All Django apps                 — Django reads this at startup for every request
 
 NOT used by : Frontend (Next.js), Terraform, or GitHub Actions directly.
@@ -26,7 +27,10 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 # ── Security ──────────────────────────────────────────────────────────────────
-# Read from environment — set in .env locally, Secret Manager on GCP
+# Read from environment — set in .env locally, Secret Manager on GCP.
+# Using os.environ["KEY"] (not .get) intentionally — if the key is missing,
+# Django will crash immediately at startup with a clear error rather than
+# silently running with no secret key.
 SECRET_KEY = os.environ["DJANGO_SECRET_KEY"]
 ALLOWED_HOSTS: list[str] = []
 
@@ -41,22 +45,22 @@ DJANGO_APPS = [
 ]
 
 THIRD_PARTY_APPS = [
-    "rest_framework",       # Django REST Framework — powers all /api/v1/ endpoints
-    "corsheaders",          # Handles CORS headers so Next.js on localhost can call Django
+    "rest_framework",   # Django REST Framework — powers all /api/v1/ endpoints
+    "corsheaders",      # Handles CORS headers so Next.js on localhost can call Django
 ]
 
 LOCAL_APPS = [
-    "apps.accounts",        # User model, Google OAuth, JWT
-    "apps.categories",      # Category, SubredditConfig, CategorySourceConfig
-    "apps.trends",          # TrendSnapshot, TrendItem, CategoryAISummary, dashboard API
-    "apps.ingestion",       # IngestionRun model, orchestrator, source adapters
-    "apps.ai",              # Vertex AI client wrappers, Gemini prompts, embeddings
+    "apps.accounts",    # User model, Google OAuth, JWT
+    "apps.categories",  # Category, SubredditConfig, CategorySourceConfig
+    "apps.trends",      # TrendSnapshot, TrendItem, CategoryAISummary, dashboard API
+    "apps.ingestion",   # IngestionRun model, orchestrator, source adapters
+    "apps.ai",          # Vertex AI client wrappers, Gemini prompts, embeddings
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 
 MIDDLEWARE = [
-    # CorsMiddleware MUST be first — it needs to add headers before any response goes out
+    # CorsMiddleware MUST be first — adds headers before any response goes out
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -89,8 +93,10 @@ WSGI_APPLICATION = "config.wsgi.application"
 
 # ── Database ──────────────────────────────────────────────────────────────────
 # All values come from environment variables.
-# Locally: set in backend/.env
-# On GCP:  DB_PASSWORD comes from Secret Manager; DB_HOST is the Cloud SQL socket path
+# Locally  : set in backend/.env, loaded by development.py via python-dotenv
+# On GCP   : DB_PASSWORD injected from Secret Manager
+#            DB_HOST is the Cloud SQL Unix socket path:
+#            /cloudsql/project:region:instance — NOT a TCP host
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
@@ -104,7 +110,8 @@ DATABASES = {
 
 # ── Custom user model ─────────────────────────────────────────────────────────
 # Tells Django to use apps.accounts.User instead of the built-in User model.
-# Must be set before the first migration — cannot be changed after.
+# CRITICAL: this must be set before the FIRST migration is ever created.
+# Changing it after migrations exist requires wiping the database.
 AUTH_USER_MODEL = "accounts.User"
 
 AUTH_PASSWORD_VALIDATORS = [
@@ -115,14 +122,25 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 # ── Django REST Framework ─────────────────────────────────────────────────────
-# All API views use JWT cookie auth by default.
-# JWTCookieAuthentication is implemented in apps/accounts/authentication.py (Phase 1 Week 3)
+#
+# WEEK 1 — authentication is intentionally open so the health check works
+# and CI passes. There are no protected endpoints yet anyway.
+#
+# WEEK 3 — swap in the real auth class once JWTCookieAuthentication exists:
+#   "DEFAULT_AUTHENTICATION_CLASSES": [
+#       "apps.accounts.authentication.JWTCookieAuthentication",
+#   ],
+#   "DEFAULT_PERMISSION_CLASSES": [
+#       "rest_framework.permissions.IsAuthenticated",
+#   ],
+#
 REST_FRAMEWORK = {
-    "DEFAULT_AUTHENTICATION_CLASSES": [
-        "apps.accounts.authentication.JWTCookieAuthentication",
-    ],
+    "DEFAULT_AUTHENTICATION_CLASSES": [],
+    # AllowAny means any request reaches the view without an auth check.
+    # Safe for now — the only live endpoint is /api/v1/health/ which has
+    # no sensitive data. Locked down in Week 3 when user-specific views exist.
     "DEFAULT_PERMISSION_CLASSES": [
-        "rest_framework.permissions.IsAuthenticated",
+        "rest_framework.permissions.AllowAny",
     ],
     "DEFAULT_RENDERER_CLASSES": [
         "rest_framework.renderers.JSONRenderer",
@@ -133,10 +151,10 @@ REST_FRAMEWORK = {
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = "UTC"
 USE_I18N = True
-USE_TZ = True  # All datetimes stored as UTC in the DB
+USE_TZ = True  # All datetimes stored as UTC in the DB — never localised at rest
 
 # ── Static files ──────────────────────────────────────────────────────────────
 STATIC_URL = "static/"
-STATIC_ROOT = BASE_DIR / "staticfiles"  # Where collectstatic puts files for the admin panel
+STATIC_ROOT = BASE_DIR / "staticfiles"  # collectstatic target for Django admin CSS
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

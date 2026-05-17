@@ -1,7 +1,7 @@
 """
 backend/run_job.py
 ──────────────────
-Purpose : Entrypoint for the Cloud Run Job (the daily ingestion + AI processing batch).
+Purpose : Entrypoint for the Cloud Run Job (daily ingestion + AI processing batch).
           Cloud Scheduler fires an HTTP POST at 03:00 UTC → Cloud Run Job starts a
           container using this file as its CMD.
 
@@ -23,13 +23,13 @@ NOT used by : The API server (Dockerfile/wsgi.py), manage.py, or the frontend.
 """
 import os
 import sys
+
 import django
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.production")
 django.setup()
 
 from apps.ingestion.orchestrator import run  # noqa: E402 — must come after django.setup()
-
 
 if __name__ == "__main__":
     sys.exit(run())

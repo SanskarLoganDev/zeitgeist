@@ -20,8 +20,9 @@ Used by : config/wsgi.py       — gunicorn loads this at API server startup
 
 NOT used by : manage.py (uses development), pytest (uses development).
 """
-from .base import *  # noqa: F401, F403
 import os
+
+from .base import *  # noqa: F401, F403
 
 DEBUG = False
 
@@ -36,16 +37,13 @@ CORS_ALLOWED_ORIGINS = os.environ.get("CORS_ALLOWED_ORIGINS", "").split(",")
 CORS_ALLOW_CREDENTIALS = True
 
 # ── Security headers ──────────────────────────────────────────────────────────
-# These headers tell browsers to enforce HTTPS, secure cookies, etc.
-SECURE_SSL_REDIRECT = True                  # Redirect all HTTP to HTTPS
-SESSION_COOKIE_SECURE = True                # Only send session cookie over HTTPS
-CSRF_COOKIE_SECURE = True                   # Only send CSRF cookie over HTTPS
-SECURE_HSTS_SECONDS = 31536000              # Tell browsers to use HTTPS for 1 year
-SECURE_HSTS_INCLUDE_SUBDOMAINS = True       # Apply HSTS to all subdomains too
+SECURE_SSL_REDIRECT = True
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+SECURE_HSTS_SECONDS = 31536000
+SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 
 # ── Structured JSON logging for Cloud Logging ─────────────────────────────────
-# Cloud Logging automatically parses JSON log lines and indexes their fields.
-# This means you can filter by level, logger name, or message in the GCP console.
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -63,6 +61,6 @@ LOGGING = {
     },
     "root": {
         "handlers": ["console"],
-        "level": "INFO",     # INFO in production — DEBUG would flood Cloud Logging
+        "level": "INFO",
     },
 }

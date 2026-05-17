@@ -16,9 +16,9 @@ Used by : Django admin panel — loaded automatically by Django at startup
 
 Phase    : 1 — Week 2 (register as soon as models exist)
 """
-from django.contrib import admin
 
 # Phase 1 Week 2:
+# from django.contrib import admin
 # from apps.ingestion.models import IngestionRun
 # from .models import TrendSnapshot, TrendItem
 # admin.site.register(IngestionRun)

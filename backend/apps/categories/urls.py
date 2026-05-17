@@ -4,8 +4,8 @@ backend/apps/categories/urls.py
 Purpose : URL routes for the categories app. Mounted at /api/v1/ by config/urls.py.
 
           Routes:
-            GET   /api/v1/categories/                   → CategoryListView
-            PATCH /api/v1/categories/preferences/       → PreferencesView        (Phase 2)
+            GET   /api/v1/categories/                   → CategoryListView        (Phase 1 Week 3)
+            PATCH /api/v1/categories/preferences/       → PreferencesView         (Phase 2)
             GET   /api/v1/categories/{slug}/            → CategoryDetailView      (Phase 2)
             GET   /api/v1/categories/{slug}/trends/     → CategoryTrendsView      (Phase 2)
             GET   /api/v1/categories/{slug}/items/      → CategoryItemsView       (Phase 2)
@@ -15,9 +15,9 @@ Used by : config/urls.py — includes this file at the /api/v1/ prefix
 
 Phase    : 1 Week 3 (categories/ list), Phase 2 (all others)
 """
-from django.urls import path
+from django.urls import URLPattern, URLResolver
 
-urlpatterns = [
+urlpatterns: list[URLPattern | URLResolver] = [
     # Phase 1 Week 3:
     # path("categories/", CategoryListView.as_view(), name="category-list"),
 

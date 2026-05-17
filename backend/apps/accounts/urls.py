@@ -3,7 +3,7 @@ backend/apps/accounts/urls.py
 ──────────────────────────────
 Purpose : URL routes for the accounts app. Mounted at /api/v1/auth/ by config/urls.py.
 
-          Routes:
+          Routes (all implemented in Phase 1 Week 3):
             POST /api/v1/auth/google/  → GoogleOAuthCallbackView  (login)
             POST /api/v1/auth/logout/  → LogoutView
             GET  /api/v1/auth/me/      → CurrentUserView          (session restore)
@@ -13,9 +13,9 @@ Used by : config/urls.py — includes this file at the /api/v1/auth/ prefix
 
 Phase    : 1 — Week 3
 """
-from django.urls import path
+from django.urls import URLPattern, URLResolver
 
-urlpatterns = [
+urlpatterns: list[URLPattern | URLResolver] = [
     # Phase 1 Week 3:
     # path("google/",  GoogleOAuthCallbackView.as_view(), name="auth-google"),
     # path("logout/",  LogoutView.as_view(),              name="auth-logout"),

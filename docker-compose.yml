@@ -1,11 +1,36 @@
 # Local development docker-compose
-# Brings up Postgres only — Django runs on the host machine (python manage.py runserver)
-# This keeps the dev loop fast: change Python code, server auto-reloads, no container rebuild.
+# ─────────────────────────────────────────────────────────────────────────────
+# Purpose : Spins up a local Postgres 16 container for development.
 #
-# Usage:
-#   docker-compose up -d          # start Postgres in background
-#   docker-compose down           # stop and remove containers
-#   docker-compose down -v        # also wipe the database volume
+# NOTE — Current local dev setup:
+#   Docker Hub is unreachable on the UMD university network.
+#   Until network access to Docker Hub is available, use a direct Postgres
+#   installation instead of this file.
+#
+#   Direct Postgres setup (Windows):
+#     1. Install Postgres 16 from enterprisedb.com to E:\PostgreSQL\16
+#     2. Password: zeitgeist_dev, Port: 5432
+#     3. In psql:
+#          CREATE USER zeitgeist WITH PASSWORD 'zeitgeist_dev';
+#          CREATE DATABASE zeitgeist OWNER zeitgeist;
+#          GRANT ALL PRIVILEGES ON DATABASE zeitgeist TO zeitgeist;
+#     4. python manage.py migrate
+#
+#   When Docker Hub is accessible (e.g. on a different network or via hotspot):
+#     docker compose up -d
+#
+# Why postgres:16-alpine:
+#   Version 16 matches GCP Cloud SQL (POSTGRES_16 in Terraform).
+#   Local dev must match production to avoid version-specific behaviour gaps.
+#   alpine variant = same Postgres, ~85MB instead of ~425MB (Debian).
+#
+# Usage (when Docker is available):
+#   docker compose up -d        start Postgres in background
+#   docker compose ps           check it is healthy
+#   docker compose down         stop (keeps data in postgres_data volume)
+#   docker compose down -v      stop AND wipe the database (fresh start)
+#   docker compose logs db      see Postgres logs
+# ─────────────────────────────────────────────────────────────────────────────
 
 services:
   db:
@@ -26,7 +51,8 @@ services:
       retries: 5
 
   # ── Phase 2: Redis cache ──────────────────────────────────────────────────
-  # Uncomment when Memorystore (Redis) is added in Phase 2
+  # Uncomment when Memorystore (Redis) is added in Phase 2.
+  # Version 7 matches GCP Memorystore for Redis 7.x.
   # redis:
   #   image: redis:7-alpine
   #   restart: unless-stopped

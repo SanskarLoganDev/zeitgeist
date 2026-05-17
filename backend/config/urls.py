@@ -7,29 +7,29 @@ Purpose : The root URL configuration for the entire Django project.
 
           Current routes:
             /admin/              → Django admin panel (staff only)
-            /api/v1/health/      → Lightweight health check (used by CI/CD smoke test + Cloud Run)
+            /api/v1/health/      → Lightweight health check (CI/CD smoke test + Cloud Run probe)
             /api/v1/auth/        → accounts app URLs (OAuth login, logout, me)
             /api/v1/             → categories app URLs (list, detail, preferences)
             /api/v1/             → trends app URLs (dashboard, ingestion admin)
 
-Used by : config/wsgi.py — Django loads this file at startup via ROOT_URLCONF setting.
+Used by : config/wsgi.py — Django loads this via ROOT_URLCONF setting.
           Every inbound HTTP request is dispatched through this file.
 
 NOT used by : run_job.py (the ingestion job never receives HTTP requests).
 """
 from django.contrib import admin
-from django.urls import path, include
-from django.http import JsonResponse
+from django.http import HttpRequest, HttpResponse, JsonResponse
+from django.urls import include, path
 
 
-def health(request):
+def health(request: HttpRequest) -> HttpResponse:
     """
     Lightweight health check endpoint.
-    Returns 200 {"status": "ok"} if Django is running and the DB connection is live.
+    Returns 200 {"status": "ok"} if Django is running.
 
     Called by:
-      - GitHub Actions CD pipeline smoke test (after every deploy)
-      - Cloud Run startup probe (to know when the container is ready for traffic)
+      - GitHub Actions CD pipeline smoke test after every deploy
+      - Cloud Run startup probe to know when container is ready
       - Cloud Monitoring uptime check (Phase 3)
     """
     return JsonResponse({"status": "ok"})

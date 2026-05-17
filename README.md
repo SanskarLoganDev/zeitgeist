@@ -9,9 +9,26 @@ to summarise what is trending and why.
 
 ## Current status
 
-**Phase:** 1 — Foundation  
-**Week:** 1 — Project scaffold + CI/CD  
-**Last updated:** 2026-05-13
+**Phase:** 1 — Foundation
+**Week:** 1 — Project scaffold + CI/CD
+**Last updated:** 2026-05-15
+
+### Week 1 checklist
+
+- [x] Django project structure created
+- [x] All app stubs created (accounts, categories, trends, ingestion, ai)
+- [x] User model stub added — migrations can now be generated
+- [x] Settings split: base / development / production
+- [x] CI/CD workflows written (ci.yml + cd.yml)
+- [x] Dockerfile + Dockerfile.job written
+- [x] Terraform infrastructure written (all 5 modules)
+- [x] Health check endpoint + test written
+- [ ] GCP project created and APIs enabled
+- [ ] Workload Identity Federation configured
+- [ ] `terraform apply` run — Cloud SQL + Cloud Run + Scheduler provisioned
+- [ ] Secret values set in Secret Manager
+- [ ] GitHub Actions secrets configured
+- [ ] First push to main — CI green, CD deploys, health check returns 200
 
 ---
 
@@ -21,14 +38,14 @@ to summarise what is trending and why.
 
 | ID | Requirement | Status |
 |---|---|---|
-| FR-01 | Google OAuth login + JWT auth | ⬜ Pending |
-| FR-04 | Home dashboard — top 5 per category | ⬜ Pending |
-| FR-05 | Category detail page — top 10–20 items | ⬜ Pending |
-| FR-06 | Trend cards (title, source badge, score, link) | ⬜ Pending |
-| FR-11 | Daily ingestion via Cloud Scheduler at 03:00 UTC | ⬜ Pending |
-| FR-12 | Snapshot storage — timestamped per run | ⬜ Pending |
-| FR-13 | Graceful source failure with stale indicator | ⬜ Pending |
-| FR-19 | Django admin — ingestion run log + manual trigger | ⬜ Pending |
+| FR-01 | Google OAuth login + JWT auth | ⬜ Pending — Week 3 |
+| FR-04 | Home dashboard — top 5 per category | ⬜ Pending — Week 3 |
+| FR-05 | Category detail page — top 10–20 items | ⬜ Pending — Week 3 |
+| FR-06 | Trend cards (title, source badge, score, link) | ⬜ Pending — Week 3 |
+| FR-11 | Daily ingestion via Cloud Scheduler at 03:00 UTC | ⬜ Pending — Week 2 |
+| FR-12 | Snapshot storage — timestamped per run | ⬜ Pending — Week 2 |
+| FR-13 | Graceful source failure with stale indicator | ⬜ Pending — Week 4 |
+| FR-19 | Django admin — ingestion run log + manual trigger | ⬜ Pending — Week 2 |
 
 ### Phase 2 — Intelligence (not started)
 
@@ -58,7 +75,7 @@ to summarise what is trending and why.
 | ⬜ | Not started |
 | 🔧 | In progress |
 | ✅ | Complete |
-| 🧪 | Complete — pending test |
+| 🧪 | Complete — pending test in CI/CD |
 
 ---
 
@@ -80,6 +97,7 @@ Move to Phase 2 only when **all three** are true:
 - Docker Desktop (for local Postgres)
 - Node.js 20+ (for Next.js frontend — Phase 1 Week 3)
 - [Terraform](https://developer.hashicorp.com/terraform/install) (for infra provisioning)
+- [gcloud CLI](https://cloud.google.com/sdk/docs/install) (for GCP operations)
 
 ### 1. Start local Postgres
 
@@ -100,7 +118,7 @@ pip install -r requirements-dev.txt
 
 ```bash
 cp .env.example .env
-# Edit .env and fill in your Reddit API and Google OAuth credentials
+# Edit .env — fill in DJANGO_SECRET_KEY, Reddit API creds, Google OAuth creds
 ```
 
 ### 4. Run migrations and start the server
@@ -110,8 +128,8 @@ python manage.py migrate
 python manage.py runserver
 ```
 
-API is now at `http://localhost:8000`  
-Health check: `http://localhost:8000/api/v1/health/`  
+API is now at `http://localhost:8000`
+Health check: `http://localhost:8000/api/v1/health/`
 Admin panel: `http://localhost:8000/admin/`
 
 ### 5. Run tests
@@ -134,22 +152,18 @@ mypy apps config
 All GCP infrastructure is managed by Terraform. One `apply` provisions everything.
 One `destroy` tears it all down.
 
-### First-time setup
+### Prerequisites (one-time, before first apply)
+
+See [GCP & GitHub setup guide](#gcp-and-github-actions-setup) below.
+
+### First-time provisioning
 
 ```bash
 cd infra
-
-# Copy and fill in your GCP project ID
 cp terraform.tfvars.example terraform.tfvars
 # Edit terraform.tfvars — set gcp_project_id
-
-# Initialise Terraform
 terraform init
-
-# Preview what will be created
 terraform plan
-
-# Provision everything
 terraform apply
 ```
 
@@ -175,17 +189,24 @@ terraform destroy
 | Cloud Load Balancer | 3 | HTTPS + custom domain |
 | Cloud Monitoring | 3 | Alerts before public launch |
 
+---
+
+## GCP and GitHub Actions setup
+
+One-time steps required before `terraform apply` and before the CD pipeline
+can deploy. See the setup checklist in the current status section above.
+
 ### GitHub Actions secrets required
 
-Set these in your GitHub repo → Settings → Secrets → Actions:
+Set these in: GitHub repo → Settings → Secrets and variables → Actions → New repository secret
 
-| Secret | Description |
+| Secret name | Where to get the value |
 |---|---|
-| `GCP_PROJECT_ID` | Your GCP project ID |
-| `GCP_WORKLOAD_IDENTITY_PROVIDER` | WIF provider resource name |
-| `GCP_DEPLOY_SA_EMAIL` | Deployment service account email |
-| `GCP_APP_SA_EMAIL` | App service account email |
-| `CLOUD_SQL_CONNECTION_NAME` | From `terraform output cloud_sql_connection_name` |
+| `GCP_PROJECT_ID` | Your GCP project ID — e.g. `zeitgeist-prod-123456` |
+| `GCP_WORKLOAD_IDENTITY_PROVIDER` | Output from WIF setup — format: `projects/NUMBER/locations/global/workloadIdentityPools/github-pool/providers/github-provider` |
+| `GCP_DEPLOY_SA_EMAIL` | From `terraform output` or GCP IAM console — format: `zeitgeist-app@your-project.iam.gserviceaccount.com` |
+| `GCP_APP_SA_EMAIL` | Same service account email as above |
+| `CLOUD_SQL_CONNECTION_NAME` | From `terraform output cloud_sql_connection_name` — format: `your-project:us-central1:zeitgeist-pg` |
 
 ---
 
@@ -200,6 +221,7 @@ zeitgeist/
 ├── backend/
 │   ├── apps/
 │   │   ├── accounts/           # User model, Google OAuth, JWT
+│   │   │   └── migrations/     # Database migrations for User model
 │   │   ├── categories/         # Category, SubredditConfig models + API
 │   │   ├── trends/             # TrendItem, TrendSnapshot, dashboard API
 │   │   ├── ingestion/          # Ingestion orchestrator + source adapters
@@ -207,46 +229,40 @@ zeitgeist/
 │   │   └── ai/                 # Vertex AI client, Gemini prompts, embeddings
 │   ├── config/
 │   │   ├── settings/
-│   │   │   ├── base.py
-│   │   │   ├── development.py
-│   │   │   └── production.py
-│   │   ├── urls.py
-│   │   └── wsgi.py
+│   │   │   ├── base.py         # Shared settings — all environments
+│   │   │   ├── development.py  # Local dev overrides
+│   │   │   └── production.py   # GCP Cloud Run overrides
+│   │   ├── urls.py             # Root URL router
+│   │   └── wsgi.py             # Gunicorn ↔ Django bridge
 │   ├── tests/
+│   │   └── test_health.py      # Health check tests (first CI tests)
 │   ├── Dockerfile              # API server image
-│   ├── Dockerfile.job          # Ingestion job image
-│   ├── manage.py
+│   ├── Dockerfile.job          # Ingestion job image (separate)
+│   ├── manage.py               # Django CLI for development
 │   ├── run_job.py              # Cloud Run Job entrypoint
-│   ├── requirements.txt
-│   ├── requirements-dev.txt
+│   ├── requirements.txt        # Production dependencies
+│   ├── requirements-dev.txt    # Dev + test dependencies
 │   ├── pyproject.toml          # ruff + mypy + pytest config
-│   └── .env.example
+│   └── .env.example            # Documents all required env vars
 ├── frontend/                   # Next.js — scaffolded in Phase 1 Week 3
 ├── infra/
-│   ├── main.tf                 # Root module — composes all modules
+│   ├── main.tf                 # Root Terraform module
 │   ├── variables.tf
 │   ├── outputs.tf
 │   ├── terraform.tfvars.example
 │   └── modules/
 │       ├── artifact_registry/
 │       ├── cloud_sql/
-│       ├── cloud_run/          # API service + ingestion job + service account
-│       ├── scheduler/          # Daily ingestion + weekly digest (Phase 3)
-│       └── secrets/            # Secret Manager resources
+│       ├── cloud_run/
+│       ├── scheduler/
+│       └── secrets/
 ├── design-docs/                # READ ONLY — do not modify
 │   ├── 01_requirements.md
 │   ├── 02_phase_plan.md
 │   └── 03_high_level_design.md
-├── docker-compose.yml          # Local Postgres (and Redis in Phase 2)
+├── docker-compose.yml
 └── .gitignore
 ```
-
----
-
-## Design documents
-
-Full requirements, phase plan, and high-level architecture are in [`design-docs/`](./design-docs/).  
-These documents are the source of truth — code follows the design, not the other way around.
 
 ---
 

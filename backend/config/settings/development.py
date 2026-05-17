@@ -7,19 +7,30 @@ Purpose : Development-only Django settings. Overrides and extends base.py for
           Loads secrets from backend/.env via python-dotenv so you never have to
           export environment variables manually in your terminal.
 
+          IMPORTANT — load_dotenv() MUST run before `from .base import *`.
+          base.py reads os.environ["DJANGO_SECRET_KEY"] at import time.
+          If dotenv hasn't loaded the .env file yet, that line raises KeyError.
+          Order matters: dotenv first, then base.py import.
+
 Used by : manage.py — sets DJANGO_SETTINGS_MODULE=config.settings.development by default
           pytest    — pyproject.toml sets DJANGO_SETTINGS_MODULE to this file for all tests
-          docker-compose — not directly, but the Django process running on the host uses this
 
 NOT used by : Dockerfile, Dockerfile.job, Cloud Run, or any GCP service.
               Production always uses config.settings.production.
 """
-from .base import *  # noqa: F401, F403 — intentional wildcard import for settings layering
-import os
+from pathlib import Path
+
 from dotenv import load_dotenv
 
-# Load backend/.env into the process environment before base.py reads os.environ
-load_dotenv(BASE_DIR / ".env")  # noqa: F405 — BASE_DIR imported from base.py via *
+# ── Load .env BEFORE importing base.py ───────────────────────────────────────
+# base.py reads os.environ["DJANGO_SECRET_KEY"] at module level.
+# load_dotenv must populate os.environ first or base.py crashes with KeyError.
+# Path: backend/.env (three levels up from this file: settings/ → config/ → backend/)
+_BASE_DIR = Path(__file__).resolve().parent.parent.parent
+load_dotenv(_BASE_DIR / ".env")
+
+# ── Now safe to import base.py — all env vars are in os.environ ──────────────
+from .base import *  # noqa: F401, F403, E402
 
 DEBUG = True
 
