@@ -366,3 +366,7 @@ $RECYCLE.BIN/
 .fuse_hidden*
 .directory
 .Trash-*
+
+# ── Troubleshooting logs ──────────────────────────────────────────────────────
+# Personal dev notes — never committed, stays on your machine only
+troubleshooting/
