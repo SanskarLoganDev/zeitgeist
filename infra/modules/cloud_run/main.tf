@@ -12,27 +12,46 @@ resource "google_service_account" "app" {
   description  = "Used by Cloud Run API and ingestion job"
 }
 
+# Read secrets from Secret Manager
 resource "google_project_iam_member" "secret_accessor" {
   project = var.project_id
   role    = "roles/secretmanager.secretAccessor"
   member  = "serviceAccount:${google_service_account.app.email}"
 }
 
+# Connect to Cloud SQL via Auth Proxy
 resource "google_project_iam_member" "cloudsql_client" {
   project = var.project_id
   role    = "roles/cloudsql.client"
   member  = "serviceAccount:${google_service_account.app.email}"
 }
 
+# Write structured logs to Cloud Logging
 resource "google_project_iam_member" "log_writer" {
   project = var.project_id
   role    = "roles/logging.logWriter"
   member  = "serviceAccount:${google_service_account.app.email}"
 }
 
+# Phase 2: Call Vertex AI (Gemini + Embeddings)
 resource "google_project_iam_member" "vertex_user" {
   project = var.project_id
   role    = "roles/aiplatform.user"
+  member  = "serviceAccount:${google_service_account.app.email}"
+}
+
+# Push Docker images to Artifact Registry — used by GitHub Actions CD pipeline
+# This was missing initially, causing "Permission denied" on docker push in CD
+resource "google_project_iam_member" "artifact_registry_writer" {
+  project = var.project_id
+  role    = "roles/artifactregistry.writer"
+  member  = "serviceAccount:${google_service_account.app.email}"
+}
+
+# Deploy new revisions to Cloud Run — used by GitHub Actions CD pipeline
+resource "google_project_iam_member" "cloud_run_developer" {
+  project = var.project_id
+  role    = "roles/run.developer"
   member  = "serviceAccount:${google_service_account.app.email}"
 }
 
@@ -41,10 +60,12 @@ resource "google_project_iam_member" "vertex_user" {
 # tries to read secrets, otherwise it hits "Permission denied".
 resource "null_resource" "iam_propagation_delay" {
   triggers = {
-    secret_accessor = google_project_iam_member.secret_accessor.id
-    cloudsql_client = google_project_iam_member.cloudsql_client.id
-    log_writer      = google_project_iam_member.log_writer.id
-    vertex_user     = google_project_iam_member.vertex_user.id
+    secret_accessor          = google_project_iam_member.secret_accessor.id
+    cloudsql_client          = google_project_iam_member.cloudsql_client.id
+    log_writer               = google_project_iam_member.log_writer.id
+    vertex_user              = google_project_iam_member.vertex_user.id
+    artifact_registry_writer = google_project_iam_member.artifact_registry_writer.id
+    cloud_run_developer      = google_project_iam_member.cloud_run_developer.id
   }
 
   provisioner "local-exec" {
