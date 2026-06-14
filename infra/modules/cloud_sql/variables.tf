@@ -5,9 +5,7 @@ variable "db_user"      { type = string }
 variable "db_password"  {
   type      = string
   sensitive = true
-  default   = ""   # Set via TF_VAR_db_password env var in CI — never in tfvars
-}
-variable "vpc_network"  {
-  type    = string
-  default = "projects/${var.project_id}/global/networks/default"
+  default   = ""
+  # Set via TF_VAR_db_password env var in CI — never hardcode here.
+  # Locally: set via gcloud sql users set-password after terraform apply.
 }

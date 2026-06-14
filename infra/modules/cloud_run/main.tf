@@ -2,6 +2,15 @@
 # Single SA used by both the API Cloud Run service and the ingestion Cloud Run Job.
 # Principle of least privilege — only the roles it needs, nothing else.
 
+locals {
+  # On first apply, real images don't exist yet — use Google's public hello-world.
+  # After first successful CD pipeline run, set use_placeholder_image = false
+  # in terraform.tfvars and run terraform apply to lock in the real image reference.
+  placeholder = "us-docker.pkg.dev/cloudrun/container/hello:latest"
+  api_image   = var.use_placeholder_image ? local.placeholder : var.api_image
+  job_image   = var.use_placeholder_image ? local.placeholder : var.job_image
+}
+
 resource "google_service_account" "app" {
   project      = var.project_id
   account_id   = "zeitgeist-app"
@@ -39,34 +48,35 @@ resource "google_project_iam_member" "vertex_user" {
 
 # ── API Cloud Run Service ─────────────────────────────────────────────────────
 resource "google_cloud_run_v2_service" "api" {
-  project  = var.project_id
-  name     = "zeitgeist-api"
-  location = var.region
+  project             = var.project_id
+  name                = "zeitgeist-api"
+  location            = var.region
+  deletion_protection = false    # Allow terraform destroy to work cleanly
 
   template {
     service_account = google_service_account.app.email
 
     scaling {
-      min_instance_count = 1    # Keep 1 warm to avoid cold starts on dashboard load
+      min_instance_count = 1
       max_instance_count = 10
     }
 
     containers {
-      image = var.api_image
+      # Uses placeholder on first apply, real image after CD pipeline runs
+      image = local.api_image
 
       env {
         name  = "DJANGO_SETTINGS_MODULE"
         value = "config.settings.production"
       }
 
-      # Secrets injected as env vars from Secret Manager
       dynamic "env" {
         for_each = {
-          DJANGO_SECRET_KEY   = "django-secret-key"
-          DB_PASSWORD         = "db-password"
-          REDDIT_CLIENT_ID    = "reddit-client-id"
+          DJANGO_SECRET_KEY    = "django-secret-key"
+          DB_PASSWORD          = "db-password"
+          REDDIT_CLIENT_ID     = "reddit-client-id"
           REDDIT_CLIENT_SECRET = "reddit-client-secret"
-          GOOGLE_CLIENT_ID    = "google-client-id"
+          GOOGLE_CLIENT_ID     = "google-client-id"
           GOOGLE_CLIENT_SECRET = "google-client-secret"
         }
         content {
@@ -112,7 +122,6 @@ resource "google_cloud_run_v2_service" "api" {
         }
       }
 
-      # Cloud SQL Auth Proxy — connects Django to Cloud SQL without public IP
       startup_probe {
         http_get {
           path = "/api/v1/health/"
@@ -149,18 +158,19 @@ resource "google_cloud_run_v2_service_iam_member" "api_public" {
 
 # ── Ingestion Cloud Run Job ───────────────────────────────────────────────────
 resource "google_cloud_run_v2_job" "ingest" {
-  project  = var.project_id
-  name     = "zeitgeist-ingest"
-  location = var.region
+  project             = var.project_id
+  name                = "zeitgeist-ingest"
+  location            = var.region
+  deletion_protection = false    # Allow terraform destroy to work cleanly
 
   template {
     template {
       service_account = google_service_account.app.email
 
       containers {
-        image = var.job_image
+        # Uses placeholder on first apply, real image after CD pipeline runs
+        image = local.job_image
 
-        # Same secret env vars as the API — ingestion needs DB + source API keys
         dynamic "env" {
           for_each = {
             DJANGO_SECRET_KEY    = "django-secret-key"
@@ -197,7 +207,7 @@ resource "google_cloud_run_v2_job" "ingest" {
         resources {
           limits = {
             cpu    = "1"
-            memory = "1Gi"    # More memory for ingestion — processes many API responses
+            memory = "1Gi"
           }
         }
       }
@@ -209,8 +219,8 @@ resource "google_cloud_run_v2_job" "ingest" {
         }
       }
 
-      max_retries = 2    # Retry failed job up to 2 times before giving up
-      timeout     = "3600s"    # 1 hour max — ingestion should finish in ~10 min
+      max_retries = 2
+      timeout     = "3600s"
     }
   }
 }
