@@ -26,14 +26,13 @@ from .base import *  # noqa: F401, F403
 
 DEBUG = False
 
-# Set from environment variable — Terraform outputs the Cloud Run service URL
-# which is then set as an env var in the Cloud Run service definition.
-# Format: "zeitgeist-api-abc123-uc.a.run.app,yourdomain.com"
-ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "").split(",")
+# Split comma-separated env vars and filter out empty strings.
+# os.environ.get("VAR", "").split(",") on an empty string produces [""]
+# which Django treats as an invalid host/origin and raises a system check error.
+# The filter(None, ...) removes any empty strings from the list.
+ALLOWED_HOSTS = list(filter(None, os.environ.get("ALLOWED_HOSTS", "").split(",")))
 
-# Phase 1-2: still "http://localhost:3000" (set via env var in Cloud Run config)
-# Phase 3: replaced with the public frontend domain
-CORS_ALLOWED_ORIGINS = os.environ.get("CORS_ALLOWED_ORIGINS", "").split(",")
+CORS_ALLOWED_ORIGINS = list(filter(None, os.environ.get("CORS_ALLOWED_ORIGINS", "").split(",")))
 CORS_ALLOW_CREDENTIALS = True
 
 # ── Security headers ──────────────────────────────────────────────────────────
