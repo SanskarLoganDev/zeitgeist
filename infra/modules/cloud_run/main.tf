@@ -12,7 +12,9 @@ resource "google_service_account" "app" {
   description  = "Used by Cloud Run API and ingestion job"
 }
 
-# Read secrets from Secret Manager
+# ── Runtime roles — needed by the running application ─────────────────────────
+
+# Read secrets from Secret Manager at container startup
 resource "google_project_iam_member" "secret_accessor" {
   project = var.project_id
   role    = "roles/secretmanager.secretAccessor"
@@ -40,24 +42,39 @@ resource "google_project_iam_member" "vertex_user" {
   member  = "serviceAccount:${google_service_account.app.email}"
 }
 
-# Push Docker images to Artifact Registry — used by GitHub Actions CD pipeline
-# This was missing initially, causing "Permission denied" on docker push in CD
+# ── CD pipeline roles — needed by GitHub Actions deployment steps ──────────────
+
+# Push Docker images to Artifact Registry
+# Required by: cd.yml steps "Push API image" and "Push ingestion job image"
 resource "google_project_iam_member" "artifact_registry_writer" {
   project = var.project_id
   role    = "roles/artifactregistry.writer"
   member  = "serviceAccount:${google_service_account.app.email}"
 }
 
-# Deploy new revisions to Cloud Run — used by GitHub Actions CD pipeline
-resource "google_project_iam_member" "cloud_run_developer" {
+# Full Cloud Run admin — covers create/update/delete services and jobs,
+# execute jobs, describe services (smoke test), and all related operations.
+# run.developer was insufficient for gcloud run jobs create --execute-now.
+# Required by: all gcloud run * commands in cd.yml
+resource "google_project_iam_member" "cloud_run_admin" {
   project = var.project_id
-  role    = "roles/run.developer"
+  role    = "roles/run.admin"
   member  = "serviceAccount:${google_service_account.app.email}"
+}
+
+# Allow the service account to act as itself when creating Cloud Run Jobs/Services.
+# GCP requires iam.serviceaccounts.actAs on the target SA when creating a resource
+# that runs as that SA — even when caller IS that SA.
+# Required by: cd.yml "Run database migrations" step (gcloud run jobs create --service-account)
+resource "google_service_account_iam_member" "self_act_as" {
+  service_account_id = google_service_account.app.name
+  role               = "roles/iam.serviceAccountUser"
+  member             = "serviceAccount:${google_service_account.app.email}"
 }
 
 # ── IAM propagation delay ─────────────────────────────────────────────────────
 # GCP IAM changes are eventually consistent — wait 60s before Cloud Run
-# tries to read secrets, otherwise it hits "Permission denied".
+# tries to read secrets, otherwise it hits "Permission denied on secret".
 resource "null_resource" "iam_propagation_delay" {
   triggers = {
     secret_accessor          = google_project_iam_member.secret_accessor.id
@@ -65,7 +82,8 @@ resource "null_resource" "iam_propagation_delay" {
     log_writer               = google_project_iam_member.log_writer.id
     vertex_user              = google_project_iam_member.vertex_user.id
     artifact_registry_writer = google_project_iam_member.artifact_registry_writer.id
-    cloud_run_developer      = google_project_iam_member.cloud_run_developer.id
+    cloud_run_admin          = google_project_iam_member.cloud_run_admin.id
+    self_act_as              = google_service_account_iam_member.self_act_as.id
   }
 
   provisioner "local-exec" {
@@ -150,11 +168,9 @@ resource "google_cloud_run_v2_service" "api" {
         }
       }
 
-      # NOTE: No startup_probe defined here intentionally.
-      # The placeholder image (hello-world) runs on port 8080, not 8000.
-      # Adding a probe for /api/v1/health/ on port 8000 causes the placeholder
-      # to fail startup checks. The real health check probe is added by the
-      # CD pipeline (cd.yml) when it deploys the actual Django image.
+      # No startup_probe here — placeholder image runs on port 8080 not 8000.
+      # Real health check is enforced by Cloud Run's default container liveness
+      # once the real Django image is deployed by the CD pipeline.
     }
 
     volumes {
