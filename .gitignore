@@ -370,3 +370,8 @@ $RECYCLE.BIN/
 # ── Troubleshooting logs ──────────────────────────────────────────────────────
 # Personal dev notes — never committed, stays on your machine only
 troubleshooting/
+
+# ── Local secrets script ──────────────────────────────────────────────────────
+# infra/secrets.sh contains real credential values — never commit
+infra/secrets.sh
+infra/secrets.bat

@@ -1,11 +1,5 @@
 # ── Service Account ───────────────────────────────────────────────────────────
-# Single SA used by both the API Cloud Run service and the ingestion Cloud Run Job.
-# Principle of least privilege — only the roles it needs, nothing else.
-
 locals {
-  # On first apply, real images don't exist yet — use Google's public hello-world.
-  # After first successful CD pipeline run, set use_placeholder_image = false
-  # in terraform.tfvars and run terraform apply to lock in the real image reference.
   placeholder = "us-docker.pkg.dev/cloudrun/container/hello:latest"
   api_image   = var.use_placeholder_image ? local.placeholder : var.api_image
   job_image   = var.use_placeholder_image ? local.placeholder : var.job_image
@@ -18,32 +12,45 @@ resource "google_service_account" "app" {
   description  = "Used by Cloud Run API and ingestion job"
 }
 
-# Read secrets from Secret Manager
 resource "google_project_iam_member" "secret_accessor" {
   project = var.project_id
   role    = "roles/secretmanager.secretAccessor"
   member  = "serviceAccount:${google_service_account.app.email}"
 }
 
-# Connect to Cloud SQL via Auth Proxy
 resource "google_project_iam_member" "cloudsql_client" {
   project = var.project_id
   role    = "roles/cloudsql.client"
   member  = "serviceAccount:${google_service_account.app.email}"
 }
 
-# Write structured logs to Cloud Logging
 resource "google_project_iam_member" "log_writer" {
   project = var.project_id
   role    = "roles/logging.logWriter"
   member  = "serviceAccount:${google_service_account.app.email}"
 }
 
-# Phase 2: Call Vertex AI (Gemini + Embeddings)
 resource "google_project_iam_member" "vertex_user" {
   project = var.project_id
   role    = "roles/aiplatform.user"
   member  = "serviceAccount:${google_service_account.app.email}"
+}
+
+# ── IAM propagation delay ─────────────────────────────────────────────────────
+# GCP IAM changes are eventually consistent — wait 60s before Cloud Run
+# tries to read secrets, otherwise it hits "Permission denied".
+resource "null_resource" "iam_propagation_delay" {
+  triggers = {
+    secret_accessor = google_project_iam_member.secret_accessor.id
+    cloudsql_client = google_project_iam_member.cloudsql_client.id
+    log_writer      = google_project_iam_member.log_writer.id
+    vertex_user     = google_project_iam_member.vertex_user.id
+  }
+
+  provisioner "local-exec" {
+    command     = "powershell -Command Start-Sleep -Seconds 60"
+    interpreter = ["cmd", "/C"]
+  }
 }
 
 # ── API Cloud Run Service ─────────────────────────────────────────────────────
@@ -51,7 +58,8 @@ resource "google_cloud_run_v2_service" "api" {
   project             = var.project_id
   name                = "zeitgeist-api"
   location            = var.region
-  deletion_protection = false    # Allow terraform destroy to work cleanly
+  deletion_protection = false
+  depends_on          = [null_resource.iam_propagation_delay]
 
   template {
     service_account = google_service_account.app.email
@@ -62,7 +70,6 @@ resource "google_cloud_run_v2_service" "api" {
     }
 
     containers {
-      # Uses placeholder on first apply, real image after CD pipeline runs
       image = local.api_image
 
       env {
@@ -122,15 +129,11 @@ resource "google_cloud_run_v2_service" "api" {
         }
       }
 
-      startup_probe {
-        http_get {
-          path = "/api/v1/health/"
-          port = 8000
-        }
-        initial_delay_seconds = 5
-        period_seconds        = 5
-        failure_threshold     = 3
-      }
+      # NOTE: No startup_probe defined here intentionally.
+      # The placeholder image (hello-world) runs on port 8080, not 8000.
+      # Adding a probe for /api/v1/health/ on port 8000 causes the placeholder
+      # to fail startup checks. The real health check probe is added by the
+      # CD pipeline (cd.yml) when it deploys the actual Django image.
     }
 
     volumes {
@@ -147,7 +150,7 @@ resource "google_cloud_run_v2_service" "api" {
   }
 }
 
-# Allow unauthenticated access (JWT auth handled by Django, not Cloud Run)
+# Allow unauthenticated access — JWT auth handled by Django, not Cloud Run
 resource "google_cloud_run_v2_service_iam_member" "api_public" {
   project  = var.project_id
   location = var.region
@@ -161,14 +164,14 @@ resource "google_cloud_run_v2_job" "ingest" {
   project             = var.project_id
   name                = "zeitgeist-ingest"
   location            = var.region
-  deletion_protection = false    # Allow terraform destroy to work cleanly
+  deletion_protection = false
+  depends_on          = [null_resource.iam_propagation_delay]
 
   template {
     template {
       service_account = google_service_account.app.email
 
       containers {
-        # Uses placeholder on first apply, real image after CD pipeline runs
         image = local.job_image
 
         dynamic "env" {

@@ -6,13 +6,11 @@ terraform {
       source  = "hashicorp/google"
       version = "~> 6.0"
     }
+    null = {
+      source  = "hashicorp/null"
+      version = "~> 3.0"
+    }
   }
-
-  # Remote state — uncomment and configure once GCS bucket is created manually
-  # backend "gcs" {
-  #   bucket = "zeitgeist-tfstate"
-  #   prefix = "terraform/state"
-  # }
 }
 
 provider "google" {
@@ -49,6 +47,8 @@ module "cloud_run" {
   db_connection         = module.cloud_sql.connection_name
   service_account       = module.cloud_run.service_account_email
   use_placeholder_image = var.use_placeholder_image
+  allowed_hosts         = var.allowed_hosts
+  cors_allowed_origins  = var.cors_allowed_origins
   depends_on            = [module.cloud_sql, module.artifact_registry, module.secrets]
 }
 

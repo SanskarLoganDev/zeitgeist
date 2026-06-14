@@ -28,12 +28,13 @@ resource "google_cloud_scheduler_job" "daily_ingest" {
   }
 }
 
-# Manual trigger job — same job, can be fired on demand for testing
+# Manual trigger job — set to Feb 28 which only fires on leap years.
+# Effectively never auto-fires — trigger manually from GCP console for testing.
 resource "google_cloud_scheduler_job" "manual_ingest_trigger" {
   project     = var.project_id
   name        = "zeitgeist-manual-ingest"
   description = "Manual trigger for ingestion job — use for testing and re-runs"
-  schedule    = "0 0 31 2 *"    # Never fires automatically (Feb 31 doesn't exist)
+  schedule    = "0 0 28 2 *"
   time_zone   = "UTC"
   region      = var.region
 
