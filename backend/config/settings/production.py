@@ -37,6 +37,10 @@ CORS_ALLOW_CREDENTIALS = True
 
 # ── Security headers ──────────────────────────────────────────────────────────
 SECURE_SSL_REDIRECT = True
+# Cloud Run terminates HTTPS before forwarding HTTP to the container. Trust its
+# forwarded proto header so Django knows the original client request was HTTPS
+# and does not redirect an already-secure request during smoke tests.
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 SECURE_HSTS_SECONDS = 31536000
