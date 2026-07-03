@@ -11,7 +11,7 @@ to summarise what is trending and why.
 
 **Phase:** 1 — Foundation
 **Week:** 1 — Project scaffold + CI/CD
-**Last updated:** 2026-05-15
+**Last updated:** 2026-07-03
 
 ### Week 1 checklist
 
@@ -23,12 +23,77 @@ to summarise what is trending and why.
 - [x] Dockerfile + Dockerfile.job written
 - [x] Terraform infrastructure written (all 5 modules)
 - [x] Health check endpoint + test written
-- [ ] GCP project created and APIs enabled
-- [ ] Workload Identity Federation configured
-- [ ] `terraform apply` run — Cloud SQL + Cloud Run + Scheduler provisioned
+- [x] GCP project created and APIs enabled
+- [x] Workload Identity Federation configured
+- [x] GitHub Actions secrets configured
+- [ ] `terraform apply` — Cloud SQL + Cloud Run + Scheduler provisioned
 - [ ] Secret values set in Secret Manager
-- [ ] GitHub Actions secrets configured
 - [ ] First push to main — CI green, CD deploys, health check returns 200
+
+---
+
+## Key design decisions
+
+### Secret Manager — values managed outside Terraform
+
+Terraform creates Secret Manager resource shells only. Secret values are
+populated via `infra\secrets.bat` AFTER `terraform apply` creates the shells.
+Cloud Run secret environment variables are attached later by the CD pipeline
+with `gcloud run ... --set-secrets`. This is intentional.
+
+**Why:** Terraform writes everything it manages into `terraform.tfstate` — plain JSON.
+If secret values were stored via `google_secret_manager_secret_version`, they would
+appear in plaintext in the state file and risk being exposed if the file is ever
+shared, committed, or accessed without authorisation.
+
+**Why Cloud Run reads secrets at container startup, not on demand:**
+Cloud Run injects secrets as environment variables before the container process starts.
+Environment variables are set once at OS process creation — there is no mechanism
+to inject new env vars into an already-running process. Django reads `os.environ`
+at settings load time, which happens during startup.
+
+For the Cloud Run Job (ingestion), startup and scheduler trigger are the same event —
+the scheduler causes a fresh container to start, secrets are injected, the job runs,
+the container exits. There is no idle container waiting between scheduler fires.
+
+**Why Terraform does not attach secrets to Cloud Run during bootstrap:**
+After `terraform destroy`, Secret Manager resources and all secret versions are gone.
+The first `terraform apply` can create empty secret shells, but there is no
+`latest` version yet. If Terraform attaches `django-secret-key:latest` to Cloud
+Run in that same apply, GCP validates the missing version and Cloud Run creation
+fails. Terraform therefore creates the Cloud Run service/job with a placeholder
+image and no secret refs. CD attaches populated secrets to the real Django
+revision after `infra\secrets.bat` has created secret versions.
+
+**In production:** `terraform destroy` is almost never run. Infrastructure is permanent.
+Secrets are populated once during initial project setup and never wiped.
+`secrets.bat` exists only because we destroy/recreate infrastructure during
+development to save cost. In a production system, secret population would be
+automated in the CD pipeline.
+
+### Correct order after every terraform destroy
+
+```
+1. cd infra && terraform apply    ← creates infra, empty secret shells, placeholder Cloud Run with no secret refs
+2. Copy terraform output api_url hostname into infra\terraform.tfvars allowed_hosts
+3. cd .. && infra\secrets.bat     ← fills the secret shells with values
+4. cd infra && terraform apply    ← updates non-secret Cloud Run env vars such as ALLOWED_HOSTS
+5. cd .. && git push origin main  ← CD deploys Django image and attaches secrets with --set-secrets
+```
+
+### Cost management during development
+
+Cloud Run with `min_instance_count = 1` costs ~$1.40/day even with zero traffic.
+All Cloud Run services are set to `min_instance_count = 0` in Terraform.
+The only persistent cost is Cloud SQL (~$7/month, ~$0.23/day).
+
+```cmd
+# Shut down between sessions (stops Cloud SQL billing)
+gcloud sql instances patch zeitgeist-pg --activation-policy=NEVER --project zeitgeist-499322
+
+# Resume when starting work again
+gcloud sql instances patch zeitgeist-pg --activation-policy=ALWAYS --project zeitgeist-499322
+```
 
 ---
 
@@ -68,15 +133,6 @@ to summarise what is trending and why.
 | FR-16 | Sentiment tags on trend cards | ⬜ Not started |
 | FR-18 | Weekly personalised digest email (SendGrid) | ⬜ Not started |
 
-### Status key
-
-| Symbol | Meaning |
-|---|---|
-| ⬜ | Not started |
-| 🔧 | In progress |
-| ✅ | Complete |
-| 🧪 | Complete — pending test in CI/CD |
-
 ---
 
 ## Phase 1 exit gate
@@ -101,46 +157,46 @@ Move to Phase 2 only when **all three** are true:
 
 ### 1. Start local Postgres
 
-```bash
-docker-compose up -d
+```cmd
+docker compose up -d
 ```
 
 ### 2. Set up Python environment
 
-```bash
+```cmd
 cd backend
 python -m venv .venv
-source .venv/bin/activate        # Windows: .venv\Scripts\activate
+.venv\Scripts\activate
 pip install -r requirements-dev.txt
 ```
 
 ### 3. Configure environment variables
 
-```bash
-cp .env.example .env
-# Edit .env — fill in DJANGO_SECRET_KEY, Reddit API creds, Google OAuth creds
+```cmd
+copy .env.example .env
+# Edit .env — fill in DJANGO_SECRET_KEY and DB credentials
 ```
 
 ### 4. Run migrations and start the server
 
-```bash
+```cmd
 python manage.py migrate
 python manage.py runserver
 ```
 
-API is now at `http://localhost:8000`
+API: `http://localhost:8000`
 Health check: `http://localhost:8000/api/v1/health/`
-Admin panel: `http://localhost:8000/admin/`
+Admin: `http://localhost:8000/admin/`
 
 ### 5. Run tests
 
-```bash
+```cmd
 pytest
 ```
 
 ### 6. Lint and type check
 
-```bash
+```cmd
 ruff check .
 mypy apps config
 ```
@@ -149,29 +205,32 @@ mypy apps config
 
 ## Infrastructure — GCP (Terraform)
 
-All GCP infrastructure is managed by Terraform. One `apply` provisions everything.
-One `destroy` tears it all down.
+### Every time after terraform destroy — exact order
 
-### Prerequisites (one-time, before first apply)
+```cmd
+cd E:\Coding-practice\Projects\zeitgeist\infra
+terraform apply                        ← step 1: creates infra + placeholder Cloud Run, no secret refs
 
-See [GCP & GitHub setup guide](#gcp-and-github-actions-setup) below.
+terraform output api_url               ← step 2: copy hostname only, no https://
+# Edit infra\terraform.tfvars:
+# allowed_hosts = "zeitgeist-api-xxxxx-uc.a.run.app"
 
-### First-time provisioning
-
-```bash
+cd E:\Coding-practice\Projects\zeitgeist
+infra\secrets.bat                      ← step 3: fills shells with values
 cd infra
-cp terraform.tfvars.example terraform.tfvars
-# Edit terraform.tfvars — set gcp_project_id
-terraform init
-terraform plan
-terraform apply
+terraform apply                        ← step 4: update allowed_hosts
+cd E:\Coding-practice\Projects\zeitgeist
+git push origin main                   ← step 5: deploy Django image + attach secrets via CD
 ```
 
-### Teardown
+### Cost management
 
-```bash
-cd infra
-terraform destroy
+```cmd
+# Shut down (stops Cloud SQL billing ~$0.23/day)
+gcloud sql instances patch zeitgeist-pg --activation-policy=NEVER --project zeitgeist-499322
+
+# Resume
+gcloud sql instances patch zeitgeist-pg --activation-policy=ALWAYS --project zeitgeist-499322
 ```
 
 ### What Terraform manages
@@ -179,34 +238,27 @@ terraform destroy
 | Resource | Phase | Notes |
 |---|---|---|
 | Artifact Registry | 1 | Docker image repo |
-| Cloud SQL (Postgres) | 1 | db-f1-micro |
-| Secret Manager secrets | 1 | Resources only — values set manually |
-| Cloud Run (API) | 1 | Django REST API |
-| Cloud Run Job (ingest) | 1 | Daily ingestion + AI |
-| Cloud Scheduler (daily) | 1 | Fires ingestion at 03:00 UTC |
+| Cloud SQL (Postgres) | 1 | db-f1-micro, ~$7/month |
+| Secret Manager secrets | 1 | Shells only — values set via secrets.bat |
+| Cloud Run API | 1 | Placeholder during Terraform bootstrap; Django image + secrets attached by CD |
+| Cloud Run Job | 1 | Placeholder during Terraform bootstrap; ingestion image + secrets attached by CD |
+| Cloud Scheduler | 1 | Fires ingestion at 03:00 UTC daily |
 | Memorystore (Redis) | 2 | Added in Phase 2 |
-| Cloud Run (frontend) | 3 | Next.js — added in Phase 3 |
+| Cloud Run Frontend | 3 | Next.js — Phase 3 |
 | Cloud Load Balancer | 3 | HTTPS + custom domain |
 | Cloud Monitoring | 3 | Alerts before public launch |
 
 ---
 
-## GCP and GitHub Actions setup
+## GitHub Actions secrets (already configured)
 
-One-time steps required before `terraform apply` and before the CD pipeline
-can deploy. See the setup checklist in the current status section above.
-
-### GitHub Actions secrets required
-
-Set these in: GitHub repo → Settings → Secrets and variables → Actions → New repository secret
-
-| Secret name | Where to get the value |
+| Secret | Value |
 |---|---|
-| `GCP_PROJECT_ID` | Your GCP project ID — e.g. `zeitgeist-prod-123456` |
-| `GCP_WORKLOAD_IDENTITY_PROVIDER` | Output from WIF setup — format: `projects/NUMBER/locations/global/workloadIdentityPools/github-pool/providers/github-provider` |
-| `GCP_DEPLOY_SA_EMAIL` | From `terraform output` or GCP IAM console — format: `zeitgeist-app@your-project.iam.gserviceaccount.com` |
-| `GCP_APP_SA_EMAIL` | Same service account email as above |
-| `CLOUD_SQL_CONNECTION_NAME` | From `terraform output cloud_sql_connection_name` — format: `your-project:us-central1:zeitgeist-pg` |
+| `GCP_PROJECT_ID` | `zeitgeist-499322` |
+| `GCP_WORKLOAD_IDENTITY_PROVIDER` | `projects/82456441710/locations/global/workloadIdentityPools/github-pool/providers/github-provider` |
+| `GCP_DEPLOY_SA_EMAIL` | `zeitgeist-app@zeitgeist-499322.iam.gserviceaccount.com` |
+| `GCP_APP_SA_EMAIL` | `zeitgeist-app@zeitgeist-499322.iam.gserviceaccount.com` |
+| `CLOUD_SQL_CONNECTION_NAME` | `zeitgeist-499322:us-central1:zeitgeist-pg` |
 
 ---
 
@@ -214,54 +266,37 @@ Set these in: GitHub repo → Settings → Secrets and variables → Actions →
 
 ```
 zeitgeist/
-├── .github/
-│   └── workflows/
-│       ├── ci.yml              # Lint + test on every push
-│       └── cd.yml              # Build + deploy on merge to main
+├── .github/workflows/
+│   ├── ci.yml              # Lint + test on every push
+│   └── cd.yml              # Build + deploy on merge to main
 ├── backend/
 │   ├── apps/
-│   │   ├── accounts/           # User model, Google OAuth, JWT
-│   │   │   └── migrations/     # Database migrations for User model
-│   │   ├── categories/         # Category, SubredditConfig models + API
-│   │   ├── trends/             # TrendItem, TrendSnapshot, dashboard API
-│   │   ├── ingestion/          # Ingestion orchestrator + source adapters
-│   │   │   └── adapters/       # Reddit, HN, YouTube, arXiv, PubMed, TMDB, Steam, NASA
-│   │   └── ai/                 # Vertex AI client, Gemini prompts, embeddings
-│   ├── config/
-│   │   ├── settings/
-│   │   │   ├── base.py         # Shared settings — all environments
-│   │   │   ├── development.py  # Local dev overrides
-│   │   │   └── production.py   # GCP Cloud Run overrides
-│   │   ├── urls.py             # Root URL router
-│   │   └── wsgi.py             # Gunicorn ↔ Django bridge
-│   ├── tests/
-│   │   └── test_health.py      # Health check tests (first CI tests)
-│   ├── Dockerfile              # API server image
-│   ├── Dockerfile.job          # Ingestion job image (separate)
-│   ├── manage.py               # Django CLI for development
-│   ├── run_job.py              # Cloud Run Job entrypoint
-│   ├── requirements.txt        # Production dependencies
-│   ├── requirements-dev.txt    # Dev + test dependencies
-│   ├── pyproject.toml          # ruff + mypy + pytest config
-│   └── .env.example            # Documents all required env vars
-├── frontend/                   # Next.js — scaffolded in Phase 1 Week 3
+│   │   ├── accounts/       # User model, Google OAuth, JWT
+│   │   ├── categories/     # Category, SubredditConfig models + API
+│   │   ├── trends/         # TrendItem, TrendSnapshot, dashboard API
+│   │   ├── ingestion/      # Orchestrator + source adapters
+│   │   └── ai/             # Vertex AI client, Gemini prompts, embeddings
+│   ├── config/settings/    # base.py, development.py, production.py
+│   ├── Dockerfile          # API server image (gunicorn, port 8000)
+│   ├── Dockerfile.job      # Ingestion job image
+│   ├── manage.py
+│   ├── run_job.py          # Cloud Run Job entrypoint
+│   └── pyproject.toml      # ruff + mypy + pytest config
+├── frontend/               # Next.js — Phase 1 Week 3
 ├── infra/
-│   ├── main.tf                 # Root Terraform module
+│   ├── main.tf
 │   ├── variables.tf
-│   ├── outputs.tf
-│   ├── terraform.tfvars.example
+│   ├── terraform.tfvars    # gitignored — contains real values
+│   ├── secrets.bat         # gitignored — populates Secret Manager values
 │   └── modules/
 │       ├── artifact_registry/
 │       ├── cloud_sql/
 │       ├── cloud_run/
 │       ├── scheduler/
 │       └── secrets/
-├── design-docs/                # READ ONLY — do not modify
-│   ├── 01_requirements.md
-│   ├── 02_phase_plan.md
-│   └── 03_high_level_design.md
-├── docker-compose.yml
-└── .gitignore
+├── troubleshooting/        # gitignored — all bugs and fixes documented here
+├── design-docs/            # READ ONLY
+└── docker-compose.yml
 ```
 
 ---
@@ -274,7 +309,7 @@ zeitgeist/
 | Frontend | Next.js 14 (App Router) + TypeScript + Tailwind |
 | Database | Postgres 16 (Cloud SQL) |
 | Cache | Redis (Memorystore) — Phase 2 |
-| AI | Vertex AI — Gemini (summaries + sentiment), text-embedding-004 (cross-platform detection) |
+| AI | Vertex AI — Gemini + text-embedding-004 |
 | Infrastructure | GCP — Cloud Run, Cloud SQL, Cloud Scheduler, Secret Manager, Artifact Registry |
 | IaC | Terraform |
 | CI/CD | GitHub Actions + Workload Identity Federation |

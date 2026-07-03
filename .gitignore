@@ -375,3 +375,5 @@ troubleshooting/
 # infra/secrets.sh contains real credential values — never commit
 infra/secrets.sh
 infra/secrets.bat
+
+Claude.md

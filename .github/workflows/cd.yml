@@ -104,11 +104,15 @@ jobs:
       # --port 8000 tells Cloud Run our app listens on port 8000 not the default
       # 8080. Without this, Cloud Run's startup probe checks port 8080, gets no
       # response, and marks the container unhealthy after 4 minutes.
+      # --set-secrets attaches populated Secret Manager versions to the real
+      # Django revision. Terraform intentionally does not attach these during
+      # initial infrastructure bootstrap because secret versions do not exist yet.
       - name: Deploy API to Cloud Run
         run: |
           gcloud run services update zeitgeist-api \
             --image ${{ env.REGISTRY }}/${{ env.REPO }}/api:${{ github.sha }} \
             --port 8000 \
+            --set-secrets "DJANGO_SECRET_KEY=django-secret-key:latest,DB_PASSWORD=db-password:latest,REDDIT_CLIENT_ID=reddit-client-id:latest,REDDIT_CLIENT_SECRET=reddit-client-secret:latest,GOOGLE_CLIENT_ID=google-client-id:latest,GOOGLE_CLIENT_SECRET=google-client-secret:latest" \
             --region ${{ env.GCP_REGION }} \
             --project ${{ env.GCP_PROJECT_ID }}
 
@@ -116,6 +120,7 @@ jobs:
         run: |
           gcloud run jobs update zeitgeist-ingest \
             --image ${{ env.REGISTRY }}/${{ env.REPO }}/job:${{ github.sha }} \
+            --set-secrets "DJANGO_SECRET_KEY=django-secret-key:latest,DB_PASSWORD=db-password:latest,REDDIT_CLIENT_ID=reddit-client-id:latest,REDDIT_CLIENT_SECRET=reddit-client-secret:latest" \
             --region ${{ env.GCP_REGION }} \
             --project ${{ env.GCP_PROJECT_ID }}
 

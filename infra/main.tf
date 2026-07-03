@@ -45,7 +45,6 @@ module "cloud_run" {
   api_image             = "${var.gcp_region}-docker.pkg.dev/${var.gcp_project_id}/zeitgeist/api:latest"
   job_image             = "${var.gcp_region}-docker.pkg.dev/${var.gcp_project_id}/zeitgeist/job:latest"
   db_connection         = module.cloud_sql.connection_name
-  service_account       = module.cloud_run.service_account_email
   use_placeholder_image = var.use_placeholder_image
   allowed_hosts         = var.allowed_hosts
   cors_allowed_origins  = var.cors_allowed_origins
