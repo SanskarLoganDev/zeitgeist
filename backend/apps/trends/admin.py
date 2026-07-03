@@ -15,13 +15,22 @@ Used by : Django admin panel — loaded automatically by Django at startup
 
 Phase    : 1 — Week 2 (register as soon as models exist)
 """
+from typing import TYPE_CHECKING, TypeAlias
+
 from django.contrib import admin
 
 from .models import TrendItem, TrendSnapshot
 
+if TYPE_CHECKING:
+    TrendSnapshotModelAdmin: TypeAlias = admin.ModelAdmin[TrendSnapshot]  # noqa: UP040
+    TrendItemModelAdmin: TypeAlias = admin.ModelAdmin[TrendItem]  # noqa: UP040
+else:
+    TrendSnapshotModelAdmin = admin.ModelAdmin
+    TrendItemModelAdmin = admin.ModelAdmin
+
 
 @admin.register(TrendSnapshot)
-class TrendSnapshotAdmin(admin.ModelAdmin):
+class TrendSnapshotAdmin(TrendSnapshotModelAdmin):
     list_display = ("category", "source", "ingestion_run", "created_at")
     list_filter = ("source", "category", "created_at")
     search_fields = ("category__name", "source")
@@ -30,7 +39,7 @@ class TrendSnapshotAdmin(admin.ModelAdmin):
 
 
 @admin.register(TrendItem)
-class TrendItemAdmin(admin.ModelAdmin):
+class TrendItemAdmin(TrendItemModelAdmin):
     list_display = ("title", "source", "snapshot", "score", "score_label", "rank", "created_at")
     list_filter = ("source", "score_label", "created_at")
     search_fields = ("title", "url", "external_url")

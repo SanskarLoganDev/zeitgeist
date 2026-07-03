@@ -17,13 +17,26 @@ Used by : Django admin panel — loaded automatically by Django at startup
 
 Phase    : 1 — Week 2 (register models as soon as they exist)
 """
+from typing import TYPE_CHECKING, TypeAlias
+
 from django.contrib import admin
 
 from .models import Category, CategorySourceConfig, SubredditConfig, UserCategoryPreference
 
+if TYPE_CHECKING:
+    CategoryModelAdmin: TypeAlias = admin.ModelAdmin[Category]  # noqa: UP040
+    SubredditConfigModelAdmin: TypeAlias = admin.ModelAdmin[SubredditConfig]  # noqa: UP040
+    CategorySourceConfigModelAdmin: TypeAlias = admin.ModelAdmin[CategorySourceConfig]  # noqa: UP040
+    UserCategoryPreferenceModelAdmin: TypeAlias = admin.ModelAdmin[UserCategoryPreference]  # noqa: UP040
+else:
+    CategoryModelAdmin = admin.ModelAdmin
+    SubredditConfigModelAdmin = admin.ModelAdmin
+    CategorySourceConfigModelAdmin = admin.ModelAdmin
+    UserCategoryPreferenceModelAdmin = admin.ModelAdmin
+
 
 @admin.register(Category)
-class CategoryAdmin(admin.ModelAdmin):
+class CategoryAdmin(CategoryModelAdmin):
     list_display = ("name", "slug", "parent", "icon", "is_active", "created_at")
     list_filter = ("is_active", "parent")
     search_fields = ("name", "slug")
@@ -32,7 +45,7 @@ class CategoryAdmin(admin.ModelAdmin):
 
 
 @admin.register(SubredditConfig)
-class SubredditConfigAdmin(admin.ModelAdmin):
+class SubredditConfigAdmin(SubredditConfigModelAdmin):
     list_display = ("subreddit", "category", "is_active", "created_at")
     list_filter = ("is_active", "category")
     search_fields = ("subreddit", "category__name")
@@ -41,7 +54,7 @@ class SubredditConfigAdmin(admin.ModelAdmin):
 
 
 @admin.register(CategorySourceConfig)
-class CategorySourceConfigAdmin(admin.ModelAdmin):
+class CategorySourceConfigAdmin(CategorySourceConfigModelAdmin):
     list_display = ("category", "source", "is_active", "created_at")
     list_filter = ("source", "is_active", "category")
     search_fields = ("category__name", "source")
@@ -50,7 +63,7 @@ class CategorySourceConfigAdmin(admin.ModelAdmin):
 
 
 @admin.register(UserCategoryPreference)
-class UserCategoryPreferenceAdmin(admin.ModelAdmin):
+class UserCategoryPreferenceAdmin(UserCategoryPreferenceModelAdmin):
     list_display = ("user", "category", "created_at")
     list_filter = ("category", "created_at")
     search_fields = ("user__email", "user__username", "category__name")

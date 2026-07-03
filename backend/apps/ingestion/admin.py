@@ -17,13 +17,20 @@ Used by : Django admin panel — loaded automatically at startup
 
 Phase    : 1 — Week 2
 """
+from typing import TYPE_CHECKING, TypeAlias
+
 from django.contrib import admin
 
 from .models import IngestionRun
 
+if TYPE_CHECKING:
+    IngestionRunModelAdmin: TypeAlias = admin.ModelAdmin[IngestionRun]  # noqa: UP040
+else:
+    IngestionRunModelAdmin = admin.ModelAdmin
+
 
 @admin.register(IngestionRun)
-class IngestionRunAdmin(admin.ModelAdmin):
+class IngestionRunAdmin(IngestionRunModelAdmin):
     list_display = (
         "category",
         "source_adapter",
