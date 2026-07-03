@@ -30,7 +30,7 @@ Purpose : Defines the BaseSourceAdapter abstract class that ALL source adapters
 
 Used by : Every source adapter inherits from this class:
             reddit.py, hackernews.py, youtube.py, arxiv.py,
-            pubmed.py, tmdb.py, steam.py, nasa.py, google_trends.py
+            pubmed.py, tmdb.py, nasa.py, google_trends.py
           apps/ingestion/orchestrator.py — calls fetch() and normalise() on each adapter
 
 Phase    : 1 — Week 2

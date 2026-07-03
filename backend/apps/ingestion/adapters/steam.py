@@ -1,7 +1,7 @@
 """
 backend/apps/ingestion/adapters/steam.py
 ──────────────────────────────────────────
-Purpose : Fetches top-played and trending games from Steam Spy and IGDB.
+Purpose : DEFERRED SOURCE. Fetches top-played and trending games from Steam Spy and IGDB.
           Used for the Gaming category to provide concrete player count data —
           not just Reddit discussion, but actual numbers of people playing.
 
@@ -21,6 +21,7 @@ Purpose : Fetches top-played and trending games from Steam Spy and IGDB.
 Used by : apps/ingestion/orchestrator.py — instantiated for categories where
             CategorySourceConfig has source="steam"
 
-Phase    : 2 — Week 5
+Phase    : Deferred — Steam Spy/IGDB is higher-risk than the other public APIs
+           because IGDB needs Twitch OAuth and Steam Spy is less official.
 """
-# Implementation coming in Phase 2 Week 5
+# Implementation intentionally deferred.

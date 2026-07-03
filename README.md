@@ -2,7 +2,7 @@
 
 A personalised social media and internet trend aggregation platform. Collects
 trending content daily from Reddit, Hacker News, YouTube, arXiv, PubMed, TMDB,
-Steam, and NASA — normalises it into a unified dashboard, and uses Google Gemini
+and NASA — normalises it into a unified dashboard, and uses Google Gemini
 to summarise what is trending and why.
 
 ---
@@ -10,7 +10,7 @@ to summarise what is trending and why.
 ## Current status
 
 **Phase:** 1 — Foundation
-**Week:** 1 — Project scaffold + CI/CD
+**Week:** 2 — Data models + ingestion
 **Last updated:** 2026-07-03
 
 ### Week 1 checklist
@@ -26,9 +26,24 @@ to summarise what is trending and why.
 - [x] GCP project created and APIs enabled
 - [x] Workload Identity Federation configured
 - [x] GitHub Actions secrets configured
-- [ ] `terraform apply` — Cloud SQL + Cloud Run + Scheduler provisioned
-- [ ] Secret values set in Secret Manager
-- [ ] First push to main — CI green, CD deploys, health check returns 200
+- [x] `terraform apply` — Cloud SQL + Cloud Run + Scheduler provisioned
+- [x] Secret values set in Secret Manager
+- [x] First push to main — CI green, CD deploys, health check returns 200
+
+### Current focus
+
+Week 1 is complete: the deployed Django API responds successfully at:
+
+```text
+https://zeitgeist-api-opowb5bpna-uc.a.run.app/api/v1/health/
+```
+
+Next up is Phase 1 Week 2: build the data model and ingestion path so Hacker
+News / Reddit trend data can flow into Cloud SQL and be inspected in Django admin.
+
+Steam/IGDB is intentionally deferred because it is the riskiest source in the
+initial list: IGDB requires Twitch OAuth and Steam Spy is less official than the
+other APIs.
 
 ---
 
@@ -111,6 +126,19 @@ gcloud sql instances patch zeitgeist-pg --activation-policy=ALWAYS --project zei
 | FR-12 | Snapshot storage — timestamped per run | ⬜ Pending — Week 2 |
 | FR-13 | Graceful source failure with stale indicator | ⬜ Pending — Week 4 |
 | FR-19 | Django admin — ingestion run log + manual trigger | ⬜ Pending — Week 2 |
+
+### Phase 1 Week 2 next steps
+
+1. Implement `Category`, `SubredditConfig`, and `CategorySourceConfig`.
+2. Implement `TrendSnapshot` and `TrendItem`.
+3. Implement `IngestionRun`.
+4. Create and apply migrations locally.
+5. Register the models in Django admin.
+6. Seed the first 3 Phase 1 categories and source configs.
+7. Implement `BaseSourceAdapter`.
+8. Implement `HackerNewsAdapter` first because it needs no credentials.
+9. Implement `RedditAdapter` with graceful handling for missing credentials.
+10. Implement `orchestrator.run()` and test locally before running the Cloud Run Job.
 
 ### Phase 2 — Intelligence (not started)
 
