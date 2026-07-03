@@ -11,6 +11,10 @@ locals {
   job_image   = var.use_placeholder_image ? local.placeholder : var.job_image
 }
 
+data "google_project" "current" {
+  project_id = var.project_id
+}
+
 resource "google_service_account" "app" {
   project      = var.project_id
   account_id   = "zeitgeist-app"
@@ -78,6 +82,16 @@ resource "google_service_account_iam_member" "self_act_as" {
   member             = "serviceAccount:${google_service_account.app.email}"
 }
 
+# Allow GitHub Actions identities from this repository to impersonate the deploy
+# service account through Workload Identity Federation. Without this binding,
+# google-github-actions/auth can exchange the OIDC token but cannot mint an
+# access token for Docker pushes or gcloud commands.
+resource "google_service_account_iam_member" "github_wif_user" {
+  service_account_id = google_service_account.app.name
+  role               = "roles/iam.workloadIdentityUser"
+  member             = "principalSet://iam.googleapis.com/projects/${data.google_project.current.number}/locations/global/workloadIdentityPools/${var.wif_pool_id}/attribute.repository/${var.github_repository}"
+}
+
 # ── IAM propagation delay ─────────────────────────────────────────────────────
 # GCP IAM changes are eventually consistent. Wait 60s before returning from
 # terraform apply so the first CD run is less likely to hit IAM propagation
@@ -91,6 +105,7 @@ resource "null_resource" "iam_propagation_delay" {
     artifact_registry_writer = google_project_iam_member.artifact_registry_writer.id
     cloud_run_admin          = google_project_iam_member.cloud_run_admin.id
     self_act_as              = google_service_account_iam_member.self_act_as.id
+    github_wif_user          = google_service_account_iam_member.github_wif_user.id
   }
 
   provisioner "local-exec" {

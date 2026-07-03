@@ -44,3 +44,15 @@ variable "cors_allowed_origins" {
   type        = string
   default     = "http://localhost:3000"
 }
+
+variable "github_repository" {
+  description = "GitHub repository allowed to impersonate the deploy service account via Workload Identity Federation."
+  type        = string
+  default     = "SanskarLoganDev/zeitgeist"
+}
+
+variable "workload_identity_pool_id" {
+  description = "Workload Identity Pool ID used by GitHub Actions."
+  type        = string
+  default     = "github-pool"
+}

@@ -48,6 +48,8 @@ module "cloud_run" {
   use_placeholder_image = var.use_placeholder_image
   allowed_hosts         = var.allowed_hosts
   cors_allowed_origins  = var.cors_allowed_origins
+  github_repository     = var.github_repository
+  wif_pool_id           = var.workload_identity_pool_id
   depends_on            = [module.cloud_sql, module.artifact_registry, module.secrets]
 }
 

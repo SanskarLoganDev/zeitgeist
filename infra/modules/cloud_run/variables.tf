@@ -3,6 +3,14 @@ variable "region"        { type = string }
 variable "api_image"     { type = string }
 variable "job_image"     { type = string }
 variable "db_connection" { type = string }
+variable "github_repository" {
+  type    = string
+  default = "SanskarLoganDev/zeitgeist"
+}
+variable "wif_pool_id" {
+  type    = string
+  default = "github-pool"
+}
 variable "allowed_hosts" {
   type    = string
   default = "localhost"
