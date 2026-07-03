@@ -7,7 +7,6 @@ Purpose : Registers trend-related models in the Django admin panel.
           and debug any issues (FR-19).
 
           What admins can see here:
-            - IngestionRun log: every run, its status, items fetched, any errors
             - TrendSnapshot: the snapshot records per category per day
             - TrendItem: individual trending posts, with source, score, URL
 
@@ -16,11 +15,25 @@ Used by : Django admin panel — loaded automatically by Django at startup
 
 Phase    : 1 — Week 2 (register as soon as models exist)
 """
+from django.contrib import admin
 
-# Phase 1 Week 2:
-# from django.contrib import admin
-# from apps.ingestion.models import IngestionRun
-# from .models import TrendSnapshot, TrendItem
-# admin.site.register(IngestionRun)
-# admin.site.register(TrendSnapshot)
-# admin.site.register(TrendItem)
+from .models import TrendItem, TrendSnapshot
+
+
+@admin.register(TrendSnapshot)
+class TrendSnapshotAdmin(admin.ModelAdmin):
+    list_display = ("category", "source", "ingestion_run", "created_at")
+    list_filter = ("source", "category", "created_at")
+    search_fields = ("category__name", "source")
+    autocomplete_fields = ("category", "ingestion_run")
+    ordering = ("-created_at",)
+
+
+@admin.register(TrendItem)
+class TrendItemAdmin(admin.ModelAdmin):
+    list_display = ("title", "source", "snapshot", "score", "score_label", "rank", "created_at")
+    list_filter = ("source", "score_label", "created_at")
+    search_fields = ("title", "url", "external_url")
+    autocomplete_fields = ("snapshot",)
+    readonly_fields = ("created_at",)
+    ordering = ("snapshot", "rank")

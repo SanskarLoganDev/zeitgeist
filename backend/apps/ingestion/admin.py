@@ -17,8 +17,23 @@ Used by : Django admin panel — loaded automatically at startup
 
 Phase    : 1 — Week 2
 """
+from django.contrib import admin
 
-# Phase 1 Week 2:
-# from django.contrib import admin
-# from .models import IngestionRun
-# admin.site.register(IngestionRun)
+from .models import IngestionRun
+
+
+@admin.register(IngestionRun)
+class IngestionRunAdmin(admin.ModelAdmin):
+    list_display = (
+        "category",
+        "source_adapter",
+        "status",
+        "items_fetched",
+        "started_at",
+        "completed_at",
+        "duration_seconds",
+    )
+    list_filter = ("status", "source_adapter", "category", "started_at")
+    search_fields = ("source_adapter", "category__name", "error_message")
+    readonly_fields = ("started_at", "completed_at", "duration_seconds")
+    ordering = ("-started_at",)
