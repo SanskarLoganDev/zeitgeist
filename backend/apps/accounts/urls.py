@@ -13,11 +13,14 @@ Used by : config/urls.py — includes this file at the /api/v1/auth/ prefix
 
 Phase    : 1 — Week 3
 """
-from django.urls import URLPattern, URLResolver
+from django.urls import URLPattern, URLResolver, path
+
+from apps.accounts.views import CSRFTokenView, CurrentUserView, LoginView, LogoutView, RegisterView
 
 urlpatterns: list[URLPattern | URLResolver] = [
-    # Phase 1 Week 3:
-    # path("google/",  GoogleOAuthCallbackView.as_view(), name="auth-google"),
-    # path("logout/",  LogoutView.as_view(),              name="auth-logout"),
-    # path("me/",      CurrentUserView.as_view(),         name="auth-me"),
+    path("csrf/", CSRFTokenView.as_view(), name="auth-csrf"),
+    path("register/", RegisterView.as_view(), name="auth-register"),
+    path("login/", LoginView.as_view(), name="auth-login"),
+    path("logout/", LogoutView.as_view(), name="auth-logout"),
+    path("me/", CurrentUserView.as_view(), name="auth-me"),
 ]

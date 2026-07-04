@@ -35,10 +35,16 @@ Phase    : 1 Week 3 — CategoryListView
 """
 from __future__ import annotations
 
+from rest_framework import status
+from rest_framework.authentication import SessionAuthentication
 from rest_framework.generics import ListAPIView
+from rest_framework.permissions import AllowAny
+from rest_framework.request import Request
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
-from apps.categories.models import Category
-from apps.categories.serializers import CategorySerializer
+from apps.categories.models import Category, UserCategoryPreference
+from apps.categories.serializers import CategoryPreferenceSerializer, CategorySerializer
 
 
 class CategoryListView(ListAPIView[Category]):
@@ -57,3 +63,48 @@ class CategoryListView(ListAPIView[Category]):
             .prefetch_related("source_configs")
             .order_by("name")
         )
+
+
+class PreferencesView(APIView):
+    """
+    Read or save the current user's category preferences.
+
+    Anonymous users can read an empty preference state so the frontend can still
+    render local-only controls. Saving requires a logged-in Django session.
+    """
+
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [AllowAny]
+
+    def get(self, request: Request) -> Response:
+        if not request.user.is_authenticated:
+            return Response({"can_save": False, "selected_slugs": []})
+
+        selected_slugs = list(
+            Category.objects.filter(user_preferences__user=request.user, is_active=True)
+            .order_by("name")
+            .values_list("slug", flat=True)
+        )
+        return Response({"can_save": True, "selected_slugs": selected_slugs})
+
+    def patch(self, request: Request) -> Response:
+        if not request.user.is_authenticated:
+            return Response(
+                {"detail": "Sign in to save category preferences."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        serializer = CategoryPreferenceSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        selected_slugs = serializer.validated_data["selected_slugs"]
+        selected_categories = Category.objects.filter(is_active=True, slug__in=selected_slugs)
+
+        UserCategoryPreference.objects.filter(user=request.user).delete()
+        UserCategoryPreference.objects.bulk_create(
+            [
+                UserCategoryPreference(user=request.user, category=category)
+                for category in selected_categories
+            ]
+        )
+
+        return Response({"can_save": True, "selected_slugs": selected_slugs})

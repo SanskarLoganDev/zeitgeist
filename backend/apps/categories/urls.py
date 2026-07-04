@@ -17,13 +17,13 @@ Phase    : 1 Week 3 (categories/ list), Phase 2 (all others)
 """
 from django.urls import URLPattern, URLResolver, path
 
-from apps.categories.views import CategoryListView
+from apps.categories.views import CategoryListView, PreferencesView
 
 urlpatterns: list[URLPattern | URLResolver] = [
     path("categories/", CategoryListView.as_view(), name="category-list"),
+    path("categories/preferences/", PreferencesView.as_view(), name="category-preferences"),
 
     # Phase 2:
-    # path("categories/preferences/",        PreferencesView.as_view(),     name="category-preferences"),
     # path("categories/<slug:slug>/",         CategoryDetailView.as_view(),  name="category-detail"),
     # path("categories/<slug:slug>/trends/",  CategoryTrendsView.as_view(),  name="category-trends"),
     # path("categories/<slug:slug>/items/",   CategoryItemsView.as_view(),   name="category-items"),

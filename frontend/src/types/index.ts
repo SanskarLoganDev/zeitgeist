@@ -40,3 +40,20 @@ export type DashboardResponse = {
 };
 
 export type CategoryTrendsResponse = DashboardCategory;
+
+export type User = {
+  id: number;
+  email: string;
+  first_name: string;
+  last_name: string;
+};
+
+export type AuthState = {
+  authenticated: boolean;
+  user: User | null;
+};
+
+export type CategoryPreferenceState = {
+  can_save: boolean;
+  selected_slugs: string[];
+};

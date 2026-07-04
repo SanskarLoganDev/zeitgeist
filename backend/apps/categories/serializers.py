@@ -28,3 +28,25 @@ class CategorySerializer(serializers.ModelSerializer[Category]):
             for source_config in source_configs
             if source_config.is_active
         ]
+
+
+class CategoryPreferenceSerializer(serializers.Serializer[dict[str, list[str]]]):
+    selected_slugs = serializers.ListField(
+        child=serializers.SlugField(),
+        allow_empty=True,
+    )
+
+    def validate_selected_slugs(self, value: list[str]) -> list[str]:
+        unique_slugs = list(dict.fromkeys(value))
+        active_slugs = set(
+            Category.objects.filter(is_active=True, slug__in=unique_slugs).values_list(
+                "slug",
+                flat=True,
+            )
+        )
+        unknown_slugs = [slug for slug in unique_slugs if slug not in active_slugs]
+        if unknown_slugs:
+            raise serializers.ValidationError(
+                f"Unknown or inactive categories: {', '.join(unknown_slugs)}"
+            )
+        return unique_slugs
