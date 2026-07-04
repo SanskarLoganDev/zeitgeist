@@ -116,13 +116,35 @@ Cloud Run with `min_instance_count = 1` costs ~$1.40/day even with zero traffic.
 All Cloud Run services are set to `min_instance_count = 0` in Terraform.
 The only persistent cost is Cloud SQL (~$7/month, ~$0.23/day).
 
-```cmd
-# Shut down between sessions (stops Cloud SQL billing)
-gcloud sql instances patch zeitgeist-pg --activation-policy=NEVER --project zeitgeist-499322
+End of day:
 
-# Resume when starting work again
-gcloud sql instances patch zeitgeist-pg --activation-policy=ALWAYS --project zeitgeist-499322
+```cmd
+# Pause scheduled ingestion so it does not run while Cloud SQL is stopped
+gcloud scheduler jobs pause zeitgeist-daily-ingest --location us-central1 --project zeitgeist-499322
+
+# Stop Cloud SQL compute billing
+gcloud sql instances patch zeitgeist-pg --activation-policy=NEVER --project zeitgeist-499322
 ```
+
+Start of day:
+
+```cmd
+# Restart Cloud SQL
+gcloud sql instances patch zeitgeist-pg --activation-policy=ALWAYS --project zeitgeist-499322
+
+# Resume scheduled ingestion
+gcloud scheduler jobs resume zeitgeist-daily-ingest --location us-central1 --project zeitgeist-499322
+```
+
+Optional status checks:
+
+```cmd
+gcloud sql instances describe zeitgeist-pg --project zeitgeist-499322 --format="value(settings.activationPolicy,state)"
+gcloud scheduler jobs describe zeitgeist-daily-ingest --location us-central1 --project zeitgeist-499322 --format="value(state)"
+```
+
+You do not need to stop Cloud Run services/jobs manually. They are configured
+with `min_instance_count = 0`, so they scale to zero when idle.
 
 ### Database maintenance job
 
@@ -315,11 +337,13 @@ git push origin main                   ← step 5: deploy Django image + attach 
 ### Cost management
 
 ```cmd
-# Shut down (stops Cloud SQL billing ~$0.23/day)
+# End of day
+gcloud scheduler jobs pause zeitgeist-daily-ingest --location us-central1 --project zeitgeist-499322
 gcloud sql instances patch zeitgeist-pg --activation-policy=NEVER --project zeitgeist-499322
 
-# Resume
+# Start of day
 gcloud sql instances patch zeitgeist-pg --activation-policy=ALWAYS --project zeitgeist-499322
+gcloud scheduler jobs resume zeitgeist-daily-ingest --location us-central1 --project zeitgeist-499322
 ```
 
 ### What Terraform manages
