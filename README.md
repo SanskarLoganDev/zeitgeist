@@ -38,8 +38,18 @@ Week 1 is complete: the deployed Django API responds successfully at:
 https://zeitgeist-api-opowb5bpna-uc.a.run.app/api/v1/health/
 ```
 
-Next up is Phase 1 Week 2: build the data model and ingestion path so verified
-Hacker News trend data can flow into Cloud SQL and be inspected in Django admin.
+Phase 1 Week 2 ingestion is working end-to-end for Hacker News: local ingestion,
+Cloud Run ingestion, production category seeding, ingestion runs, snapshots, and
+trend items have all been proven against Cloud SQL.
+
+Current immediate focus:
+
+1. Observe the next CD run and confirm `zeitgeist-db-maintenance` runs both
+   `migrate` and `seed_categories`, with no new `zeitgeist-migrate-N` job.
+2. Verify the Terraform Cloud Run drift fix with `terraform plan` before the
+   next normal apply.
+3. Live-verify the next public API source before adding adapter/schema/secrets
+   or CD wiring. Suggested next source: arXiv or NASA.
 
 Reddit is deferred. As of 2026, Reddit API access for personal scripts is gated
 by approval and is not reliable enough for Week 1/2 development. Do not add
@@ -93,6 +103,13 @@ Run in that same apply, GCP validates the missing version and Cloud Run creation
 fails. Terraform therefore creates the Cloud Run service/job with a placeholder
 image and no secret refs. CD attaches populated secrets to the real Django
 revision after `infra\secrets.bat` has created secret versions.
+
+**Why Terraform ignores Cloud Run image/env drift after CD:**
+GitHub Actions CD owns runtime deployments: it updates the real API/job images
+and attaches secret environment variables. Terraform owns the surrounding
+infrastructure shape. The Cloud Run service/job therefore use lifecycle ignores
+for container image and env fields so a later `terraform plan` does not try to
+roll production back to placeholder images or remove CD-attached secrets.
 
 **In production:** `terraform destroy` is almost never run. Infrastructure is permanent.
 Secrets are populated once during initial project setup and never wiped.

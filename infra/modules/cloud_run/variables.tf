@@ -1,7 +1,7 @@
-variable "project_id"    { type = string }
-variable "region"        { type = string }
-variable "api_image"     { type = string }
-variable "job_image"     { type = string }
+variable "project_id" { type = string }
+variable "region" { type = string }
+variable "api_image" { type = string }
+variable "job_image" { type = string }
 variable "db_connection" { type = string }
 variable "github_repository" {
   type    = string
@@ -23,9 +23,9 @@ variable "cors_allowed_origins" {
 # ── Placeholder image ─────────────────────────────────────────────────────────
 # On first terraform apply the real Docker images don't exist yet —
 # the CD pipeline hasn't run. Cloud Run requires a valid image to create
-# the service. Set use_placeholder_image = true for the initial apply,
-# then set it to false after the first successful CD pipeline run.
-# Google's hello-world image is a tiny public image that starts instantly.
+# the service. Keep this true for bootstrap; after CD deploys the real images,
+# lifecycle.ignore_changes in main.tf prevents Terraform from rolling the live
+# service/job back to placeholders.
 variable "use_placeholder_image" {
   type        = bool
   default     = true
