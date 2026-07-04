@@ -5,11 +5,11 @@ Purpose : Defines the IngestionRun model — the audit log for every ingestion a
 
           IngestionRun
             One record is written per source adapter per daily run.
-            If there are 3 categories × 2 sources (Reddit + HN), that's 6 records
+            If there are 3 categories × 2 sources, that's 6 records
             written after each run.
 
             Fields:
-              source_adapter  : which adapter ran — "reddit", "hackernews", etc.
+              source_adapter  : which adapter ran — "hackernews", "youtube", etc.
               category        : which category this run served
               status          : "success" | "partial" | "failed"
               items_fetched   : how many TrendItems were written

@@ -18,7 +18,7 @@ Purpose : Fetches top stories from Hacker News using the official Firebase API.
 
           Used for: Tech and Research categories primarily.
           HN aggregates the highest-quality tech/research links from the community —
-          a strong signal that complements Reddit's broader discussion volume.
+          a strong signal that complements broader cross-source trend volume.
 
 Used by : apps/ingestion/orchestrator.py — instantiated for categories where
             CategorySourceConfig has source="hackernews"

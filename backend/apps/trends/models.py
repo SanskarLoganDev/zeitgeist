@@ -40,7 +40,7 @@ class TrendSnapshot(models.Model):
 
     Why a snapshot per source rather than per category?
     Each source is fetched independently by a separate adapter. A category
-    can have multiple sources (e.g. Tech = Reddit + HN). Each source run
+    can have multiple sources (e.g. Tech = HN + arXiv). Each source run
     creates its own snapshot. This means:
       - A failing source doesn't wipe the snapshot from a successful source
       - Historical views can be filtered by source (FR-09)
@@ -77,11 +77,10 @@ class TrendSnapshot(models.Model):
 
 class TrendItem(models.Model):
     """
-    One trending item within a snapshot — a Reddit post, HN story,
+    One trending item within a snapshot — an HN story,
     YouTube video, arXiv paper, etc.
 
     score and score_label are normalised across sources:
-      Reddit    → upvotes,    score_label="upvotes"
       HN        → points,     score_label="points"
       YouTube   → view count, score_label="views"
       arXiv     → rank,       score_label="recent submissions"
@@ -90,11 +89,9 @@ class TrendItem(models.Model):
       NASA      → rank,       score_label="featured"
 
     external_url is the URL the item links to (the actual article/repo/video).
-    url is the platform URL (e.g. reddit.com/r/.../comments/...).
-    These differ for Reddit link posts but are the same for HN stories.
+    url is the platform URL (e.g. the HN discussion URL).
     """
 
-    SOURCE_REDDIT = "reddit"
     SOURCE_HACKERNEWS = "hackernews"
     SOURCE_YOUTUBE = "youtube"
     SOURCE_ARXIV = "arxiv"
@@ -103,7 +100,6 @@ class TrendItem(models.Model):
     SOURCE_NASA = "nasa"
 
     SOURCE_CHOICES = [
-        (SOURCE_REDDIT, "Reddit"),
         (SOURCE_HACKERNEWS, "Hacker News"),
         (SOURCE_YOUTUBE, "YouTube"),
         (SOURCE_ARXIV, "arXiv"),
@@ -131,13 +127,13 @@ class TrendItem(models.Model):
     source = models.CharField(max_length=50, choices=SOURCE_CHOICES)
 
     title = models.TextField()
-    # Platform URL — links to the post/story on Reddit, HN, etc.
+    # Platform URL — links to the post/story on the source platform.
     url = models.URLField(max_length=2000)
     # External URL — what the post links to (article, repo, paper).
-    # Null for text posts (Reddit self-posts, HN Ask/Show).
+    # Null for source-native posts without an external link (HN Ask/Show).
     external_url = models.URLField(max_length=2000, null=True, blank=True)
 
-    # Normalised engagement score — upvotes for Reddit, points for HN, etc.
+    # Normalised engagement score — points for HN, views for YouTube, etc.
     score = models.BigIntegerField(default=0)
     # Human-readable label for the score — shown in the UI on trend cards
     score_label = models.CharField(max_length=50, default="score")

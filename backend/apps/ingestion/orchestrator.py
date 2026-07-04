@@ -23,13 +23,13 @@ Purpose : The main coordinator for the daily ingestion batch job.
 
           Key design principle (FR-13):
             Each adapter is isolated in a try/except. One failing source
-            (e.g. Reddit rate-limits) never stops other sources from running.
+            (e.g. one API rate-limits) never stops other sources from running.
             The last successful snapshot is always served to users.
 
 Used by : run_job.py — calls orchestrator.run() as the job entrypoint
           apps/trends/views.py (IngestionTriggerView) — admin manual re-trigger
 
-Phase    : 1 — Week 2 (Reddit + HN adapters only)
+Phase    : 1 — Week 2 (HN adapter only)
            Phase 2 — all 9 sources + Gemini AI processing
            Phase 3 — cross-platform detection + Redis cache invalidation
 """

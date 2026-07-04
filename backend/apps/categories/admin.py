@@ -2,14 +2,13 @@
 backend/apps/categories/admin.py
 ──────────────────────────────────
 Purpose : Registers category-related models in the Django admin panel.
-          This is where admins add/edit categories, subreddits, and source
-          adapter mappings — fulfilling FR-20 (no code deploy needed for
+          This is where admins add/edit categories and source adapter mappings
+          — fulfilling FR-20 (no code deploy needed for
           new categories that use existing adapters).
 
           What admins can do here:
             - Add a new Category (e.g. "Sports") with a slug and icon
-            - Add SubredditConfig rows to map subreddits to that category
-            - Add CategorySourceConfig rows to enable Reddit/HN/YouTube for it
+            - Add CategorySourceConfig rows to enable HN/YouTube/arXiv for it
             - Toggle categories active/inactive without any deployment
 
 Used by : Django admin panel — loaded automatically by Django at startup
@@ -21,16 +20,14 @@ from typing import TYPE_CHECKING, TypeAlias
 
 from django.contrib import admin
 
-from .models import Category, CategorySourceConfig, SubredditConfig, UserCategoryPreference
+from .models import Category, CategorySourceConfig, UserCategoryPreference
 
 if TYPE_CHECKING:
     CategoryModelAdmin: TypeAlias = admin.ModelAdmin[Category]  # noqa: UP040
-    SubredditConfigModelAdmin: TypeAlias = admin.ModelAdmin[SubredditConfig]  # noqa: UP040
     CategorySourceConfigModelAdmin: TypeAlias = admin.ModelAdmin[CategorySourceConfig]  # noqa: UP040
     UserCategoryPreferenceModelAdmin: TypeAlias = admin.ModelAdmin[UserCategoryPreference]  # noqa: UP040
 else:
     CategoryModelAdmin = admin.ModelAdmin
-    SubredditConfigModelAdmin = admin.ModelAdmin
     CategorySourceConfigModelAdmin = admin.ModelAdmin
     UserCategoryPreferenceModelAdmin = admin.ModelAdmin
 
@@ -42,15 +39,6 @@ class CategoryAdmin(CategoryModelAdmin):
     search_fields = ("name", "slug")
     prepopulated_fields = {"slug": ("name",)}
     ordering = ("name",)
-
-
-@admin.register(SubredditConfig)
-class SubredditConfigAdmin(SubredditConfigModelAdmin):
-    list_display = ("subreddit", "category", "is_active", "created_at")
-    list_filter = ("is_active", "category")
-    search_fields = ("subreddit", "category__name")
-    autocomplete_fields = ("category",)
-    ordering = ("category__name", "subreddit")
 
 
 @admin.register(CategorySourceConfig)

@@ -14,8 +14,6 @@ locals {
     # ── Phase 1 ──────────────────────────────────────────────────────────────
     "django-secret-key"    = "Django SECRET_KEY"
     "db-password"          = "Cloud SQL postgres user password"
-    "reddit-client-id"     = "Reddit OAuth client ID (PRAW)"
-    "reddit-client-secret" = "Reddit OAuth client secret (PRAW)"
     "google-client-id"     = "Google OAuth client ID (user login)"
     "google-client-secret" = "Google OAuth client secret (user login)"
 

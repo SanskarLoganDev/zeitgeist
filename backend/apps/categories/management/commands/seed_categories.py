@@ -1,5 +1,5 @@
 """
-Seed starter categories, source mappings, and subreddit mappings.
+Seed starter categories and source mappings.
 
 Run with:
     python manage.py seed_categories
@@ -11,7 +11,7 @@ from typing import TypedDict
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
-from apps.categories.models import Category, CategorySourceConfig, SubredditConfig
+from apps.categories.models import Category, CategorySourceConfig
 
 
 class StarterCategory(TypedDict):
@@ -19,7 +19,6 @@ class StarterCategory(TypedDict):
     slug: str
     icon: str
     sources: list[str]
-    subreddits: list[str]
 
 
 STARTER_CATEGORIES: list[StarterCategory] = [
@@ -29,35 +28,33 @@ STARTER_CATEGORIES: list[StarterCategory] = [
         "icon": "tech",
         "sources": [
             CategorySourceConfig.SOURCE_HACKERNEWS,
-            CategorySourceConfig.SOURCE_REDDIT,
         ],
-        "subreddits": ["programming", "technology", "MachineLearning"],
     },
     {
         "name": "Gaming",
         "slug": "gaming",
         "icon": "gaming",
-        "sources": [CategorySourceConfig.SOURCE_REDDIT],
-        "subreddits": ["gaming", "pcgaming", "Games"],
+        "sources": [],
     },
     {
         "name": "News",
         "slug": "news",
         "icon": "news",
-        "sources": [CategorySourceConfig.SOURCE_REDDIT],
-        "subreddits": ["news", "worldnews"],
+        "sources": [],
     },
 ]
 
 
 class Command(BaseCommand):
-    help = "Seed Phase 1 starter categories, source configs, and subreddit configs."
+    help = "Seed Phase 1 starter categories and source configs."
 
     @transaction.atomic
     def handle(self, *args: object, **options: object) -> None:
         categories_created = 0
         source_configs_created = 0
-        subreddit_configs_created = 0
+        deprecated_source_configs_removed, _ = CategorySourceConfig.objects.filter(
+            source="reddit",
+        ).delete()
 
         for category_data in STARTER_CATEGORIES:
             category, created = Category.objects.get_or_create(
@@ -93,20 +90,11 @@ class Command(BaseCommand):
                 if source_created:
                     source_configs_created += 1
 
-            for subreddit in category_data["subreddits"]:
-                _, subreddit_created = SubredditConfig.objects.get_or_create(
-                    category=category,
-                    subreddit=subreddit,
-                    defaults={"is_active": True},
-                )
-                if subreddit_created:
-                    subreddit_configs_created += 1
-
         self.stdout.write(
             self.style.SUCCESS(
                 "Seed complete: "
                 f"{categories_created} categories created, "
                 f"{source_configs_created} source configs created, "
-                f"{subreddit_configs_created} subreddit configs created."
+                f"{deprecated_source_configs_removed} deprecated source configs removed."
             )
         )

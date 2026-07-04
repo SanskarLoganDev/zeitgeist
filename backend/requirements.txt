@@ -10,7 +10,6 @@ PyJWT==2.9.*                    # JWT issuance and validation
 google-auth==2.*                # Google OAuth token verification
 
 # ── Data ingestion — Phase 1 ──────────────────────────────────────────────────
-praw==7.*                       # Reddit API (Python Reddit API Wrapper)
 requests==2.32.*                # HTTP client for HN + misc APIs
 
 # ── Data ingestion — Phase 2 ─────────────────────────────────────────────────

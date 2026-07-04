@@ -3,7 +3,7 @@ backend/apps/ai/cross_platform.py
 ───────────────────────────────────
 Purpose : Detects when the same topic is trending across multiple platforms
           simultaneously — e.g. a new AI model that appears in r/MachineLearning
-          on Reddit, in an arXiv paper, AND in an HN top story on the same day.
+          on HN, in an arXiv paper, AND in a YouTube trend on the same day.
 
           This is the "trending everywhere" feature (FR-10, FR-15).
 
@@ -22,7 +22,7 @@ Purpose : Detects when the same topic is trending across multiple platforms
           based on real data in Phase 3.
 
           Why this matters:
-            A single Reddit post might be noise. The same topic appearing on Reddit,
+            A single source item might be noise. The same topic appearing on HN,
             HN, and arXiv simultaneously is a much stronger signal that something
             genuinely significant is happening.
 

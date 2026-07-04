@@ -1,8 +1,8 @@
 """
 backend/apps/categories/models.py
 ───────────────────────────────────
-Purpose : Defines the data models for categories, subreddit configuration,
-          and the mapping between categories and source adapters.
+Purpose : Defines the data models for categories and the mapping between
+          categories and source adapters.
 
           Models:
             Category
@@ -12,14 +12,8 @@ Purpose : Defines the data models for categories, subreddit configuration,
                 the subcategory UI is not activated until Phase 2.
               - slug field used in all API URLs: /api/v1/categories/gaming/
 
-            SubredditConfig
-              - Maps a subreddit name to a Category.
-              - Stored in the DB (not hardcoded) so admins can add/remove
-                subreddits without a code deploy (FR-20).
-              - Example: { category: Gaming, subreddit: "pcgaming", active: True }
-
             CategorySourceConfig
-              - Maps a Category to a source adapter (reddit, hackernews, youtube…)
+              - Maps a Category to a source adapter (hackernews, youtube, arxiv…)
               - Controls which adapters run for which category during ingestion.
               - Example: { category: Tech, source: "hackernews", active: True }
 
@@ -31,9 +25,8 @@ Purpose : Defines the data models for categories, subreddit configuration,
 Used by : apps/categories/views.py      — CategoryListView, PreferencesView
           apps/ingestion/orchestrator.py — reads CategorySourceConfig to know
                                            which adapters to run per category
-          apps/ingestion/adapters/reddit.py — reads SubredditConfig for subreddit list
           apps/trends/views.py           — reads UserCategoryPreference to filter dashboard
-          Django admin                   — admins edit SubredditConfig and CategorySourceConfig
+          Django admin                   — admins edit CategorySourceConfig
 
 Phase    : 1 — Week 2
 """
@@ -84,42 +77,6 @@ class Category(models.Model):
         return self.name
 
 
-class SubredditConfig(models.Model):
-    """
-    Maps a subreddit to a Category. Stored in the DB so admins can add,
-    remove, or deactivate subreddits without a code deploy (FR-20).
-
-    The Reddit adapter reads active SubredditConfig rows for a given category
-    at ingestion time to know which subreddits to fetch.
-    """
-
-    category = models.ForeignKey(
-        Category,
-        on_delete=models.CASCADE,
-        related_name="subreddit_configs",
-    )
-    subreddit = models.CharField(
-        max_length=100,
-        help_text="Subreddit name without r/ prefix — e.g. 'programming'",
-    )
-    is_active = models.BooleanField(
-        default=True,
-        help_text="Inactive subreddits are skipped during ingestion",
-    )
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        db_table = "categories_subreddit_config"
-        verbose_name = "subreddit config"
-        verbose_name_plural = "subreddit configs"
-        # One subreddit can only be mapped to a given category once
-        unique_together = [("category", "subreddit")]
-        ordering = ["category__name", "subreddit"]
-
-    def __str__(self) -> str:
-        return f"r/{self.subreddit} → {self.category.name}"
-
-
 class CategorySourceConfig(models.Model):
     """
     Maps a Category to a source adapter. Controls which adapters the orchestrator
@@ -132,7 +89,6 @@ class CategorySourceConfig(models.Model):
     sources require admin config only (FR-20).
     """
 
-    SOURCE_REDDIT = "reddit"
     SOURCE_HACKERNEWS = "hackernews"
     SOURCE_YOUTUBE = "youtube"        # Phase 2
     SOURCE_ARXIV = "arxiv"            # Phase 2
@@ -141,7 +97,6 @@ class CategorySourceConfig(models.Model):
     SOURCE_NASA = "nasa"              # Phase 2
 
     SOURCE_CHOICES = [
-        (SOURCE_REDDIT, "Reddit"),
         (SOURCE_HACKERNEWS, "Hacker News"),
         (SOURCE_YOUTUBE, "YouTube"),
         (SOURCE_ARXIV, "arXiv"),

@@ -8,7 +8,7 @@ Purpose : Defines the BaseSourceAdapter abstract class that ALL source adapters
           Every adapter must implement three methods:
 
             get_source_name() -> str
-              Returns the adapter's identifier string — "reddit", "hackernews",
+              Returns the adapter's identifier string — "hackernews",
               "youtube" etc. This is stored in TrendItem.source and IngestionRun.source_adapter.
 
             fetch(category: Category) -> list[RawItem]
@@ -29,7 +29,7 @@ Purpose : Defines the BaseSourceAdapter abstract class that ALL source adapters
             to the orchestrator or any other file needed.
 
 Used by : Every source adapter inherits from this class:
-            reddit.py, hackernews.py, youtube.py, arxiv.py,
+            hackernews.py, youtube.py, arxiv.py,
             pubmed.py, tmdb.py, nasa.py, google_trends.py
           apps/ingestion/orchestrator.py — calls fetch() and normalise() on each adapter
 

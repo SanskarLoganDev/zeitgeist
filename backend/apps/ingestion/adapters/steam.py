@@ -3,7 +3,7 @@ backend/apps/ingestion/adapters/steam.py
 ──────────────────────────────────────────
 Purpose : DEFERRED SOURCE. Fetches top-played and trending games from Steam Spy and IGDB.
           Used for the Gaming category to provide concrete player count data —
-          not just Reddit discussion, but actual numbers of people playing.
+          not just social discussion, but actual numbers of people playing.
 
           Sources:
             Steam Spy API (free): top games by concurrent players, owner estimates

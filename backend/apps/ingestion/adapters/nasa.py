@@ -2,7 +2,7 @@
 backend/apps/ingestion/adapters/nasa.py
 ─────────────────────────────────────────
 Purpose : Fetches featured content from NASA Open APIs.
-          Used for the Space category to enrich Reddit/arXiv discussion with
+          Used for the Space category to enrich arXiv/news discussion with
           official NASA mission data and astronomy content.
 
           APIs used:

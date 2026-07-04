@@ -51,7 +51,7 @@ THIRD_PARTY_APPS = [
 
 LOCAL_APPS = [
     "apps.accounts",    # User model, Google OAuth, JWT
-    "apps.categories",  # Category, SubredditConfig, CategorySourceConfig
+    "apps.categories",  # Category, CategorySourceConfig
     "apps.trends",      # TrendSnapshot, TrendItem, CategoryAISummary, dashboard API
     "apps.ingestion",   # IngestionRun model, orchestrator, source adapters
     "apps.ai",          # Vertex AI client wrappers, Gemini prompts, embeddings

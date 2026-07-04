@@ -3,7 +3,7 @@ backend/apps/ingestion/adapters/tmdb.py
 ─────────────────────────────────────────
 Purpose : Fetches trending movies and TV shows from The Movie Database (TMDB) API.
           Used for the TV/Movies category to provide structured entertainment data
-          that complements Reddit discussion in r/movies and r/television.
+          that complements broader movie/TV discussion.
 
           API used: /trending/movie/day and /trending/tv/day endpoints.
           Free API key required — no rate limit issues at our volume (40 req/10sec).

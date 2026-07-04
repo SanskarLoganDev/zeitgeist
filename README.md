@@ -1,9 +1,9 @@
 # Zeitgeist
 
 A personalised social media and internet trend aggregation platform. Collects
-trending content daily from Reddit, Hacker News, YouTube, arXiv, PubMed, TMDB,
-and NASA — normalises it into a unified dashboard, and uses Google Gemini
-to summarise what is trending and why.
+trending content daily from verified public APIs such as Hacker News, YouTube,
+arXiv, PubMed, TMDB, and NASA — normalises it into a unified dashboard, and uses
+Google Gemini to summarise what is trending and why.
 
 ---
 
@@ -38,12 +38,26 @@ Week 1 is complete: the deployed Django API responds successfully at:
 https://zeitgeist-api-opowb5bpna-uc.a.run.app/api/v1/health/
 ```
 
-Next up is Phase 1 Week 2: build the data model and ingestion path so Hacker
-News / Reddit trend data can flow into Cloud SQL and be inspected in Django admin.
+Next up is Phase 1 Week 2: build the data model and ingestion path so verified
+Hacker News trend data can flow into Cloud SQL and be inspected in Django admin.
+
+Reddit is deferred. As of 2026, Reddit API access for personal scripts is gated
+by approval and is not reliable enough for Week 1/2 development. Do not add
+Reddit back into active models, seed data, secrets, or orchestration until API
+access is approved and a live fetch verifies the response shape.
 
 Steam/IGDB is intentionally deferred because it is the riskiest source in the
 initial list: IGDB requires Twitch OAuth and Steam Spy is less official than the
 other APIs.
+
+### Source verification rule
+
+Before a source is implemented, verify the API first:
+
+1. Confirm the API is publicly available or that required approval/key access is already granted.
+2. Run a live fetch against the endpoint and save the response shape in notes/tests.
+3. Confirm auth, rate limits, cost, and terms are acceptable for the project.
+4. Only then add models, adapter code, secrets, CI/CD wiring, and tests.
 
 ---
 
@@ -129,16 +143,16 @@ gcloud sql instances patch zeitgeist-pg --activation-policy=ALWAYS --project zei
 
 ### Phase 1 Week 2 next steps
 
-1. Implement `Category`, `SubredditConfig`, and `CategorySourceConfig`.
+1. Implement `Category` and `CategorySourceConfig`.
 2. Implement `TrendSnapshot` and `TrendItem`.
 3. Implement `IngestionRun`.
 4. Create and apply migrations locally.
 5. Register the models in Django admin.
-6. Seed the first 3 Phase 1 categories and source configs.
+6. Seed the first 3 Phase 1 categories and verified source configs.
 7. Implement `BaseSourceAdapter`.
 8. Implement `HackerNewsAdapter` first because it needs no credentials.
-9. Implement `RedditAdapter` with graceful handling for missing credentials.
-10. Implement `orchestrator.run()` and test locally before running the Cloud Run Job.
+9. Implement `orchestrator.run()` and test locally before running the Cloud Run Job.
+10. Verify the next public API source before adding another adapter.
 
 ### Phase 2 — Intelligence (not started)
 
@@ -149,7 +163,7 @@ gcloud sql instances patch zeitgeist-pg --activation-policy=ALWAYS --project zei
 | FR-08 | Trend charts per category | ⬜ Not started |
 | FR-09 | Source platform filter | ⬜ Not started |
 | FR-14 | Gemini AI trend summary per category | ⬜ Not started |
-| FR-20 | Admin-configurable categories and subreddit lists | ⬜ Not started |
+| FR-20 | Admin-configurable categories and source mappings | ⬜ Not started |
 
 ### Phase 3 — Polish & Ship (not started)
 
@@ -300,7 +314,7 @@ zeitgeist/
 ├── backend/
 │   ├── apps/
 │   │   ├── accounts/       # User model, Google OAuth, JWT
-│   │   ├── categories/     # Category, SubredditConfig models + API
+│   │   ├── categories/     # Category, source config models + API
 │   │   ├── trends/         # TrendItem, TrendSnapshot, dashboard API
 │   │   ├── ingestion/      # Orchestrator + source adapters
 │   │   └── ai/             # Vertex AI client, Gemini prompts, embeddings
