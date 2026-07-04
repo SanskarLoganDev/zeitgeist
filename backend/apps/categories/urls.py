@@ -15,11 +15,12 @@ Used by : config/urls.py — includes this file at the /api/v1/ prefix
 
 Phase    : 1 Week 3 (categories/ list), Phase 2 (all others)
 """
-from django.urls import URLPattern, URLResolver
+from django.urls import URLPattern, URLResolver, path
+
+from apps.categories.views import CategoryListView
 
 urlpatterns: list[URLPattern | URLResolver] = [
-    # Phase 1 Week 3:
-    # path("categories/", CategoryListView.as_view(), name="category-list"),
+    path("categories/", CategoryListView.as_view(), name="category-list"),
 
     # Phase 2:
     # path("categories/preferences/",        PreferencesView.as_view(),     name="category-preferences"),

@@ -12,11 +12,13 @@ Used by : config/urls.py — includes this file at the /api/v1/ prefix
 
 Phase    : 1 Week 2 (admin views), Phase 1 Week 3 (dashboard)
 """
-from django.urls import URLPattern, URLResolver
+from django.urls import URLPattern, URLResolver, path
+
+from apps.trends.views import CategoryTrendsView, DashboardView
 
 urlpatterns: list[URLPattern | URLResolver] = [
-    # Phase 1 Week 3:
-    # path("dashboard/", DashboardView.as_view(), name="dashboard"),
+    path("dashboard/", DashboardView.as_view(), name="dashboard"),
+    path("categories/<slug:slug>/trends/", CategoryTrendsView.as_view(), name="category-trends"),
 
     # Phase 1 Week 2:
     # path("admin/ingestion/runs/",    IngestionRunListView.as_view(),  name="ingestion-runs"),

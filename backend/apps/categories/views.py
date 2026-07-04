@@ -33,5 +33,27 @@ Used by : apps/categories/urls.py — routes requests to these views
 Phase    : 1 Week 3 — CategoryListView
            Phase 2   — all other views
 """
-# Implementation coming in Phase 1 Week 3 (CategoryListView)
-# Remaining views in Phase 2
+from __future__ import annotations
+
+from rest_framework.generics import ListAPIView
+
+from apps.categories.models import Category
+from apps.categories.serializers import CategorySerializer
+
+
+class CategoryListView(ListAPIView[Category]):
+    """
+    Return active categories for the dashboard navigation.
+
+    This endpoint reads only local database state. External APIs are called by
+    ingestion jobs, not by request/response views.
+    """
+
+    serializer_class = CategorySerializer
+
+    def get_queryset(self):  # type: ignore[no-untyped-def]
+        return (
+            Category.objects.filter(is_active=True)
+            .prefetch_related("source_configs")
+            .order_by("name")
+        )
