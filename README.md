@@ -436,7 +436,7 @@ zeitgeist/
 | Layer | Technology |
 |---|---|
 | Backend | Django 5.1 + Django REST Framework |
-| Frontend | Next.js 14 (App Router) + TypeScript + Tailwind |
+| Frontend | Next.js 16 (App Router) + TypeScript + plain CSS |
 | Database | Postgres 16 (Cloud SQL) |
 | Cache | Redis (Memorystore) — Phase 2 |
 | AI | Vertex AI — Gemini + text-embedding-004 |

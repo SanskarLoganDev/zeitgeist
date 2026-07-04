@@ -151,10 +151,17 @@ jobs:
       # initial infrastructure bootstrap because secret versions do not exist yet.
       - name: Deploy API to Cloud Run
         run: |
+          API_URL=$(gcloud run services describe zeitgeist-api \
+            --region ${{ env.GCP_REGION }} \
+            --project ${{ env.GCP_PROJECT_ID }} \
+            --format 'value(status.url)')
+          API_HOST=${API_URL#https://}
+
           gcloud run services update zeitgeist-api \
             --image ${{ env.REGISTRY }}/${{ env.REPO }}/api:${{ github.sha }} \
             --port 8000 \
             --set-secrets "DJANGO_SECRET_KEY=django-secret-key:latest,DB_PASSWORD=db-password:latest,GOOGLE_CLIENT_ID=google-client-id:latest,GOOGLE_CLIENT_SECRET=google-client-secret:latest" \
+            --set-env-vars "DB_HOST=/cloudsql/${{ secrets.CLOUD_SQL_CONNECTION_NAME }},DB_NAME=zeitgeist,DB_USER=zeitgeist,DJANGO_SETTINGS_MODULE=config.settings.production,ALLOWED_HOSTS=$API_HOST,CORS_ALLOWED_ORIGINS=http://localhost:3000" \
             --region ${{ env.GCP_REGION }} \
             --project ${{ env.GCP_PROJECT_ID }}
 
