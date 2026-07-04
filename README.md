@@ -124,6 +124,53 @@ gcloud sql instances patch zeitgeist-pg --activation-policy=NEVER --project zeit
 gcloud sql instances patch zeitgeist-pg --activation-policy=ALWAYS --project zeitgeist-499322
 ```
 
+### Database maintenance job
+
+The CD workflow uses one reusable Cloud Run Job for production database setup:
+
+```text
+zeitgeist-db-maintenance
+```
+
+This is not an API. It is a maintenance job that CD updates and executes before
+deploying the API. It runs:
+
+```cmd
+python manage.py migrate --noinput
+python manage.py seed_categories
+```
+
+`seed_categories` is idempotent, so it is safe to run every deploy. This keeps
+production Cloud SQL from having the schema without the starter application data
+that ingestion depends on.
+
+Older deployments created one-off jobs named `zeitgeist-migrate-N`. Those can
+be deleted after CD finishes.
+
+List Cloud Run jobs:
+
+```cmd
+gcloud run jobs list --region us-central1 --project zeitgeist-499322
+```
+
+Delete old migration jobs:
+
+```cmd
+gcloud run jobs delete zeitgeist-migrate-15 --region us-central1 --project zeitgeist-499322 --quiet
+gcloud run jobs delete zeitgeist-migrate-16 --region us-central1 --project zeitgeist-499322 --quiet
+gcloud run jobs delete zeitgeist-migrate-17 --region us-central1 --project zeitgeist-499322 --quiet
+gcloud run jobs delete zeitgeist-migrate-18 --region us-central1 --project zeitgeist-499322 --quiet
+gcloud run jobs delete zeitgeist-migrate-20 --region us-central1 --project zeitgeist-499322 --quiet
+```
+
+Do not delete:
+
+```text
+zeitgeist-api
+zeitgeist-ingest
+zeitgeist-db-maintenance
+```
+
 ---
 
 ## Requirements progress

@@ -81,12 +81,34 @@ jobs:
           docker push ${{ env.REGISTRY }}/${{ env.REPO }}/job:${{ github.sha }}
           docker push ${{ env.REGISTRY }}/${{ env.REPO }}/job:latest
 
-      # ── Run database migrations BEFORE switching traffic ────────────────────
+      # ── Run database setup BEFORE switching traffic ─────────────────────────
       # ALLOWED_HOSTS and CORS_ALLOWED_ORIGINS must be set even for the migration
-      # job — Django runs system checks at startup before migrate executes.
+      # job — Django runs system checks at startup before management commands run.
+      # This reuses one Cloud Run Job instead of creating zeitgeist-migrate-N on
+      # every deploy.
+      - name: Ensure database maintenance job exists
+        run: |
+          if gcloud run jobs describe zeitgeist-db-maintenance \
+            --region ${{ env.GCP_REGION }} \
+            --project ${{ env.GCP_PROJECT_ID }} >/dev/null 2>&1; then
+            echo "Database maintenance job already exists"
+          else
+            gcloud run jobs create zeitgeist-db-maintenance \
+              --image ${{ env.REGISTRY }}/${{ env.REPO }}/api:${{ github.sha }} \
+              --region ${{ env.GCP_REGION }} \
+              --project ${{ env.GCP_PROJECT_ID }} \
+              --command "python" \
+              --args "manage.py,check,--deploy" \
+              --set-cloudsql-instances ${{ secrets.CLOUD_SQL_CONNECTION_NAME }} \
+              --service-account ${{ secrets.GCP_APP_SA_EMAIL }} \
+              --set-secrets "DJANGO_SECRET_KEY=django-secret-key:latest,DB_PASSWORD=db-password:latest" \
+              --set-env-vars "DB_HOST=/cloudsql/${{ secrets.CLOUD_SQL_CONNECTION_NAME }},DB_NAME=zeitgeist,DB_USER=zeitgeist,DJANGO_SETTINGS_MODULE=config.settings.production,ALLOWED_HOSTS=localhost,CORS_ALLOWED_ORIGINS=http://localhost:3000" \
+              --max-retries 1
+          fi
+
       - name: Run database migrations
         run: |
-          gcloud run jobs create zeitgeist-migrate-${{ github.run_number }} \
+          gcloud run jobs update zeitgeist-db-maintenance \
             --image ${{ env.REGISTRY }}/${{ env.REPO }}/api:${{ github.sha }} \
             --region ${{ env.GCP_REGION }} \
             --project ${{ env.GCP_PROJECT_ID }} \
@@ -96,8 +118,28 @@ jobs:
             --service-account ${{ secrets.GCP_APP_SA_EMAIL }} \
             --set-secrets "DJANGO_SECRET_KEY=django-secret-key:latest,DB_PASSWORD=db-password:latest" \
             --set-env-vars "DB_HOST=/cloudsql/${{ secrets.CLOUD_SQL_CONNECTION_NAME }},DB_NAME=zeitgeist,DB_USER=zeitgeist,DJANGO_SETTINGS_MODULE=config.settings.production,ALLOWED_HOSTS=localhost,CORS_ALLOWED_ORIGINS=http://localhost:3000" \
-            --max-retries 1 \
-            --execute-now \
+            --max-retries 1
+          gcloud run jobs execute zeitgeist-db-maintenance \
+            --region ${{ env.GCP_REGION }} \
+            --project ${{ env.GCP_PROJECT_ID }} \
+            --wait
+
+      - name: Seed starter categories
+        run: |
+          gcloud run jobs update zeitgeist-db-maintenance \
+            --image ${{ env.REGISTRY }}/${{ env.REPO }}/api:${{ github.sha }} \
+            --region ${{ env.GCP_REGION }} \
+            --project ${{ env.GCP_PROJECT_ID }} \
+            --command "python" \
+            --args "manage.py,seed_categories" \
+            --set-cloudsql-instances ${{ secrets.CLOUD_SQL_CONNECTION_NAME }} \
+            --service-account ${{ secrets.GCP_APP_SA_EMAIL }} \
+            --set-secrets "DJANGO_SECRET_KEY=django-secret-key:latest,DB_PASSWORD=db-password:latest" \
+            --set-env-vars "DB_HOST=/cloudsql/${{ secrets.CLOUD_SQL_CONNECTION_NAME }},DB_NAME=zeitgeist,DB_USER=zeitgeist,DJANGO_SETTINGS_MODULE=config.settings.production,ALLOWED_HOSTS=localhost,CORS_ALLOWED_ORIGINS=http://localhost:3000" \
+            --max-retries 1
+          gcloud run jobs execute zeitgeist-db-maintenance \
+            --region ${{ env.GCP_REGION }} \
+            --project ${{ env.GCP_PROJECT_ID }} \
             --wait
 
       # ── Deploy API to Cloud Run ─────────────────────────────────────────────
