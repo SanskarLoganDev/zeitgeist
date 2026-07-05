@@ -1,6 +1,7 @@
 import type { FreshnessStatus } from "../types";
 
 const SOURCE_LABELS: Record<string, string> = {
+  devto: "DEV",
   hackernews: "Hacker News"
 };
 

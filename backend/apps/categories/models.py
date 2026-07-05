@@ -13,7 +13,7 @@ Purpose : Defines the data models for categories and the mapping between
               - slug field used in all API URLs: /api/v1/categories/gaming/
 
             CategorySourceConfig
-              - Maps a Category to a source adapter (hackernews, youtube, arxiv…)
+              - Maps a Category to a source adapter (hackernews, devto, youtube…)
               - Controls which adapters run for which category during ingestion.
               - Example: { category: Tech, source: "hackernews", active: True }
 
@@ -90,6 +90,7 @@ class CategorySourceConfig(models.Model):
     """
 
     SOURCE_HACKERNEWS = "hackernews"
+    SOURCE_DEVTO = "devto"
     SOURCE_YOUTUBE = "youtube"        # Phase 2
     SOURCE_ARXIV = "arxiv"            # Phase 2
     SOURCE_PUBMED = "pubmed"          # Phase 2
@@ -98,6 +99,7 @@ class CategorySourceConfig(models.Model):
 
     SOURCE_CHOICES = [
         (SOURCE_HACKERNEWS, "Hacker News"),
+        (SOURCE_DEVTO, "DEV"),
         (SOURCE_YOUTUBE, "YouTube"),
         (SOURCE_ARXIV, "arXiv"),
         (SOURCE_PUBMED, "PubMed"),

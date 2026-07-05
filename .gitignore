@@ -373,6 +373,10 @@ $RECYCLE.BIN/
 # Personal dev notes — never committed, stays on your machine only
 troubleshooting/
 
+# ── Generated local design docs ───────────────────────────────────────────────
+output/pdf/zeitgeist_phase1_design_story.pdf
+output/pdf/zeitgeist_phase1_design_story.md
+
 # ── Local secrets script ──────────────────────────────────────────────────────
 # infra/secrets.sh contains real credential values — never commit
 infra/secrets.sh

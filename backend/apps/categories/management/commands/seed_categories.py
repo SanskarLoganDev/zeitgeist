@@ -28,6 +28,7 @@ STARTER_CATEGORIES: list[StarterCategory] = [
         "icon": "tech",
         "sources": [
             CategorySourceConfig.SOURCE_HACKERNEWS,
+            CategorySourceConfig.SOURCE_DEVTO,
         ],
     },
     {

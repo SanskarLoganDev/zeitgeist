@@ -78,21 +78,23 @@ class TrendSnapshot(models.Model):
 class TrendItem(models.Model):
     """
     One trending item within a snapshot — an HN story,
-    YouTube video, arXiv paper, etc.
+    DEV article, YouTube video, arXiv paper, etc.
 
     score and score_label are normalised across sources:
-      HN        → points,     score_label="points"
-      YouTube   → view count, score_label="views"
-      arXiv     → rank,       score_label="recent submissions"
-      PubMed    → citations,  score_label="citations"
-      TMDB      → popularity, score_label="popularity"
-      NASA      → rank,       score_label="featured"
+      HN        → points,              score_label="points"
+      DEV       → reactions + comments, score_label="engagement"
+      YouTube   → view count,          score_label="views"
+      arXiv     → rank,                score_label="recent submissions"
+      PubMed    → citations,           score_label="citations"
+      TMDB      → popularity,          score_label="popularity"
+      NASA      → rank,                score_label="featured"
 
     external_url is the URL the item links to (the actual article/repo/video).
     url is the platform URL (e.g. the HN discussion URL).
     """
 
     SOURCE_HACKERNEWS = "hackernews"
+    SOURCE_DEVTO = "devto"
     SOURCE_YOUTUBE = "youtube"
     SOURCE_ARXIV = "arxiv"
     SOURCE_PUBMED = "pubmed"
@@ -101,6 +103,7 @@ class TrendItem(models.Model):
 
     SOURCE_CHOICES = [
         (SOURCE_HACKERNEWS, "Hacker News"),
+        (SOURCE_DEVTO, "DEV"),
         (SOURCE_YOUTUBE, "YouTube"),
         (SOURCE_ARXIV, "arXiv"),
         (SOURCE_PUBMED, "PubMed"),

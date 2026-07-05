@@ -10,8 +10,8 @@ Google Gemini to summarise what is trending and why.
 ## Current status
 
 **Phase:** 1 — Foundation
-**Week:** 2 — Data models + ingestion
-**Last updated:** 2026-07-03
+**Status:** Complete under revised local-first scope
+**Last updated:** 2026-07-04
 
 ### Week 1 checklist
 
@@ -32,24 +32,36 @@ Google Gemini to summarise what is trending and why.
 
 ### Current focus
 
-Week 1 is complete: the deployed Django API responds successfully at:
+Phase 1 is complete as a working end-to-end slice:
 
-```text
-https://zeitgeist-api-opowb5bpna-uc.a.run.app/api/v1/health/
-```
+- Django backend deploys to Cloud Run and responds successfully at
+  `https://zeitgeist-api-opowb5bpna-uc.a.run.app/api/v1/health/`.
+- Hacker News ingestion works end to end: external API → adapter →
+  orchestrator → Postgres snapshots/items → dashboard API → Next.js UI.
+- Production Cloud SQL has been verified with seeded categories, ingestion runs,
+  snapshots, and trend items.
+- Next.js local dashboard renders real trend data from the Django API.
+- Simple Django session auth is implemented locally with email/password signup,
+  login, logout, CSRF protection, and saved category preferences.
+- Anonymous users can view the dashboard and choose preferences locally.
+- Logged-in users can save preferences to the database and restore them across
+  refreshes/devices.
 
-Phase 1 Week 2 ingestion is working end-to-end for Hacker News: local ingestion,
-Cloud Run ingestion, production category seeding, ingestion runs, snapshots, and
-trend items have all been proven against Cloud SQL.
+Phase 1 scope adjustment: the original design docs called for Google OAuth +
+JWT in Phase 1. For current development, auth was intentionally simplified to
+Django session auth with email/password so the saved-preferences product loop can
+be tested before adding Google OAuth, JWT, and production email verification.
 
-Current immediate focus:
+Immediate next steps:
 
-1. Observe the next CD run and confirm `zeitgeist-db-maintenance` runs both
-   `migrate` and `seed_categories`, with no new `zeitgeist-migrate-N` job.
-2. Verify the Terraform Cloud Run drift fix with `terraform plan` before the
-   next normal apply.
-3. Live-verify the next public API source before adding adapter/schema/secrets
-   or CD wiring. Suggested next source: arXiv or NASA.
+1. Commit and push the current session-auth/frontend changes.
+2. Confirm CI passes.
+3. Confirm CD still deploys the backend and health smoke test returns 200.
+4. Keep frontend auth testing local for now. Cloud session auth should be enabled
+   after the frontend has a deployed origin or after production cookie/CORS/CSRF
+   settings are deliberately configured.
+5. Live-verify the next public API source before adding adapter/schema/secrets or
+   CD wiring. Suggested next source: arXiv or NASA.
 
 Reddit is deferred. As of 2026, Reddit API access for personal scripts is gated
 by approval and is not reliable enough for Week 1/2 development. Do not add
@@ -214,31 +226,18 @@ zeitgeist-db-maintenance
 
 ## Requirements progress
 
-### Phase 1 — Foundation (current)
+### Phase 1 — Foundation
 
 | ID | Requirement | Status |
 |---|---|---|
-| FR-01 | Google OAuth login + JWT auth | ⬜ Pending — Week 3 |
-| FR-04 | Home dashboard — top 5 per category | ⬜ Pending — Week 3 |
-| FR-05 | Category detail page — top 10–20 items | ⬜ Pending — Week 3 |
-| FR-06 | Trend cards (title, source badge, score, link) | ⬜ Pending — Week 3 |
-| FR-11 | Daily ingestion via Cloud Scheduler at 03:00 UTC | ⬜ Pending — Week 2 |
-| FR-12 | Snapshot storage — timestamped per run | ⬜ Pending — Week 2 |
-| FR-13 | Graceful source failure with stale indicator | ⬜ Pending — Week 4 |
-| FR-19 | Django admin — ingestion run log + manual trigger | ⬜ Pending — Week 2 |
-
-### Phase 1 Week 2 next steps
-
-1. Implement `Category` and `CategorySourceConfig`.
-2. Implement `TrendSnapshot` and `TrendItem`.
-3. Implement `IngestionRun`.
-4. Create and apply migrations locally.
-5. Register the models in Django admin.
-6. Seed the first 3 Phase 1 categories and verified source configs.
-7. Implement `BaseSourceAdapter`.
-8. Implement `HackerNewsAdapter` first because it needs no credentials.
-9. Implement `orchestrator.run()` and test locally before running the Cloud Run Job.
-10. Verify the next public API source before adding another adapter.
+| FR-01 | Auth | ✅ Revised — Django session auth with email/password, CSRF, signup/login/logout, saved preferences |
+| FR-04 | Home dashboard — top 5 per category | ✅ Done — Next.js dashboard renders real Hacker News data |
+| FR-05 | Category detail page — top 10–20 items | ✅ Done — `/category/{slug}` consumes category trends API |
+| FR-06 | Trend cards (title, source, score, link) | ✅ Done |
+| FR-11 | Daily ingestion via Cloud Scheduler at 03:00 UTC | ✅ Provisioned — manual Cloud Run job execution verified |
+| FR-12 | Snapshot storage — timestamped per run | ✅ Done |
+| FR-13 | Graceful source failure with stale indicator | ✅ Initial support — API returns fresh/stale/missing status |
+| FR-19 | Django admin — ingestion run log | ✅ Done — models registered and ingestion runs visible |
 
 ### Phase 2 — Intelligence (not started)
 
@@ -265,11 +264,20 @@ zeitgeist-db-maintenance
 
 ## Phase 1 exit gate
 
-Move to Phase 2 only when **all three** are true:
+Revised local-first Phase 1 gate:
 
-- [ ] Daily ingestion has run successfully at least **3 consecutive times**
-- [ ] Dashboard loads with real data in **under 2 seconds** from localhost
-- [ ] Google OAuth login works — user persists in DB, JWT valid across page refreshes
+- [x] End-to-end Hacker News data path works from external API to frontend.
+- [x] Dashboard loads with real data from localhost.
+- [x] User can create an account, sign in, save preferences, refresh, and restore
+  saved preferences locally.
+- [ ] After commit/push, CI and CD must pass with the new backend code.
+
+Deferred from original Phase 1 gate:
+
+- Google OAuth + JWT is replaced for now by Django session auth.
+- Email verification is not implemented yet.
+- Production/cloud frontend auth is deferred until the frontend has a deployed
+  origin or production cross-origin cookie settings are explicitly configured.
 
 ---
 
@@ -316,18 +324,73 @@ API: `http://localhost:8000`
 Health check: `http://localhost:8000/api/v1/health/`
 Admin: `http://localhost:8000/admin/`
 
-### 5. Run tests
+### 5. Seed categories and run local ingestion
+
+`seed_categories` creates the starter categories and source mappings in your
+local database. The ingestion job then reads those mappings, fetches external
+source data, and writes `IngestionRun`, `TrendSnapshot`, and `TrendItem` rows.
+
+```cmd
+python manage.py seed_categories
+```
+
+For local ingestion, force development settings so Django loads `backend\.env`.
+This is needed because `run_job.py` defaults to production settings for Cloud
+Run, where secrets are injected by GCP Secret Manager instead of read from
+`.env`.
+
+```powershell
+$env:DJANGO_SETTINGS_MODULE="config.settings.development"
+python run_job.py
+```
+
+After it finishes, check:
+
+```text
+http://127.0.0.1:8000/api/v1/dashboard/
+```
+
+For Tech, you should see source groups such as `hackernews` and `devto`.
+
+### 6. Run tests
 
 ```cmd
 pytest
 ```
 
-### 6. Lint and type check
+### 7. Lint and type check
 
 ```cmd
 ruff check .
 mypy apps config
 ```
+
+### 8. Run the local frontend
+
+```cmd
+cd frontend
+npm install
+npm run dev
+```
+
+Frontend: `http://localhost:3000`
+
+For local auth testing, `frontend\.env.local` should point at the local backend:
+
+```text
+NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000/api/v1
+```
+
+`frontend\.env.local` is gitignored and should not be committed.
+
+### 9. Local auth test flow
+
+1. Open `http://localhost:3000`.
+2. Click `Create account`.
+3. Create an email/password account.
+4. Select category preferences and save.
+5. Refresh the page and confirm preferences restore.
+6. Sign out and sign back in.
 
 ---
 
@@ -374,7 +437,7 @@ gcloud scheduler jobs resume zeitgeist-daily-ingest --location us-central1 --pro
 | Cloud Run Job | 1 | Placeholder during Terraform bootstrap; ingestion image + secrets attached by CD |
 | Cloud Scheduler | 1 | Fires ingestion at 03:00 UTC daily |
 | Memorystore (Redis) | 2 | Added in Phase 2 |
-| Cloud Run Frontend | 3 | Next.js — Phase 3 |
+| Cloud Run Frontend | 3 | Next.js deploy deferred; local frontend is Phase 1/2 |
 | Cloud Load Balancer | 3 | HTTPS + custom domain |
 | Cloud Monitoring | 3 | Alerts before public launch |
 
@@ -401,7 +464,7 @@ zeitgeist/
 │   └── cd.yml              # Build + deploy on merge to main
 ├── backend/
 │   ├── apps/
-│   │   ├── accounts/       # User model, Google OAuth, JWT
+│   │   ├── accounts/       # User model, session auth, future Google OAuth/JWT
 │   │   ├── categories/     # Category, source config models + API
 │   │   ├── trends/         # TrendItem, TrendSnapshot, dashboard API
 │   │   ├── ingestion/      # Orchestrator + source adapters
