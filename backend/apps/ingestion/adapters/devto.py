@@ -28,7 +28,6 @@ class DevToArticle(TypedDict):
 class DevToAdapter(BaseSourceAdapter[DevToArticle]):
     source_name = "devto"
     articles_url = "https://dev.to/api/articles"
-    tech_tags = "javascript,webdev,ai,programming,security"
     top_days = 7
     request_timeout_seconds = 10
 
@@ -44,7 +43,6 @@ class DevToAdapter(BaseSourceAdapter[DevToArticle]):
             self.articles_url,
             params={
                 "top": self.top_days,
-                "tags": self.tech_tags,
                 "per_page": limit,
             },
             timeout=self.request_timeout_seconds,

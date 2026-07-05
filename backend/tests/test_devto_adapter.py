@@ -61,7 +61,6 @@ def test_fetch_returns_valid_dev_articles_only() -> None:
     assert session.requested_url == DevToAdapter.articles_url
     assert session.requested_kwargs["params"] == {
         "top": 7,
-        "tags": "javascript,webdev,ai,programming,security",
         "per_page": 5,
     }
 

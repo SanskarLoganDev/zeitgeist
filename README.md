@@ -317,7 +317,7 @@ copy .env.example .env
 
 ```cmd
 python manage.py migrate
-python manage.py runserver
+python manage.py runserver localhost:8000
 ```
 
 API: `http://localhost:8000`
@@ -347,7 +347,7 @@ python run_job.py
 After it finishes, check:
 
 ```text
-http://127.0.0.1:8000/api/v1/dashboard/
+http://localhost:8000/api/v1/dashboard/
 ```
 
 For Tech, you should see source groups such as `hackernews` and `devto`.
@@ -378,7 +378,7 @@ Frontend: `http://localhost:3000`
 For local auth testing, `frontend\.env.local` should point at the local backend:
 
 ```text
-NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000/api/v1
+NEXT_PUBLIC_API_BASE_URL=http://localhost:8000/api/v1
 ```
 
 `frontend\.env.local` is gitignored and should not be committed.

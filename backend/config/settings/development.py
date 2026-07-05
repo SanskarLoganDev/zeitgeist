@@ -38,7 +38,7 @@ ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
 
 # ── CORS ──────────────────────────────────────────────────────────────────────
 # Allow Next.js dev server (localhost:3000) to call the Django API.
-# CORS_ALLOW_CREDENTIALS=True is required so the browser sends the JWT cookie.
+# CORS_ALLOW_CREDENTIALS=True lets the browser send Django session/CSRF cookies.
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
 ]
