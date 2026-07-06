@@ -1,18 +1,28 @@
-# TrendPulse — Requirements Document
+# Zeitgeist — Requirements Document
 
-**Version:** 1.0  
-**Status:** Approved  
-**Last Updated:** 2026-05-11
+**Version:** 2.0  
+**Status:** Revised after Phase 1 implementation decisions  
+**Last Updated:** 2026-07-06
 
 ---
 
 ## 1. Project Overview
 
-TrendPulse is a personalised social media and internet trend aggregation platform. It collects trending content daily from multiple public data sources — Reddit, Hacker News, YouTube, arXiv, PubMed, TMDB, Steam, and NASA — normalises it into a unified data model, and surfaces it to users through a categorised, searchable dashboard. An AI layer (Google Gemini) generates plain-English summaries of what is trending and why, and detects when the same topic surfaces across multiple platforms simultaneously.
+Zeitgeist is a personalised internet trend aggregation platform. It collects
+trending content daily from verified public APIs, normalises it into a unified
+data model, and surfaces it through a categorised dashboard. The current
+verified baseline covers Tech, Gaming, and News through Hacker News, DEV, RAWG,
+and New York Times Most Popular. An AI layer (Google Gemini) may generate
+plain-English summaries of what is trending and why after the public dashboard
+flow is stable.
 
 ### 1.1 Problem Statement
 
-There is no single place for a person to see what is genuinely trending across their specific areas of interest — whether that is gaming, academic research, finance, or space exploration. Existing tools either cover a single platform (Reddit apps), require paid subscriptions (media monitoring tools), or surface noise rather than signal. TrendPulse solves this by aggregating multiple high-quality public sources, applying AI to summarise and contextualise trends, and delivering a personalised experience based on each user's interests.
+There is no single place for a person to see what is genuinely trending across
+their specific areas of interest. Existing tools either cover a single platform,
+require paid subscriptions, or surface noise rather than signal. Zeitgeist
+solves this by aggregating verified public sources, storing daily snapshots, and
+delivering a personalised experience based on each user's interests.
 
 ### 1.2 Target Users
 
@@ -35,35 +45,47 @@ There is no single place for a person to see what is genuinely trending across t
 
 ## 2. Data Sources
 
-All data sources are free and publicly accessible. No proprietary or paywalled APIs are used.
+All active data sources must be verified with a live API fetch before code,
+schema, secrets, or deployment wiring are added.
 
-| Source | Categories Served | API / Access Method | Rate Limit |
-|---|---|---|---|
-| Reddit (PRAW) | News, Gaming, Finance, Space, Food, TV/Movies | OAuth API — 60 req/min | 60 req/min authenticated |
-| Hacker News API | Tech, Research, Finance | Free Firebase API — no auth | No rate limit |
-| YouTube Data API | Gaming, TV/Movies, Food | OAuth API key | 10,000 units/day |
-| arXiv API | Research, AI, Space, Health | Free REST API — no auth | Polite crawling |
-| PubMed / NCBI | Health, Research | Free E-utilities API | 10 req/sec with API key |
-| TMDB API | TV/Movies | Free API key | 40 req/10 sec |
-| Steam Spy + IGDB | Gaming | Free / Twitch OAuth | Varies |
-| NASA Open APIs | Space | Free API key | 1,000 req/hour |
-| Google Trends (pytrends) | All categories (historical) | Unofficial scraper library | Soft limit — batch carefully |
+Verification must confirm:
 
-### 2.1 Subreddit Configuration
+1. Access method: public, API key, OAuth, approval-gated, or paid.
+2. Response shape and required fields.
+3. A usable trend signal such as points, reactions, views, rank, adds, ratings,
+   or another defensible popularity metric.
+4. Rate limits and free-tier limits.
+5. Fit with the current `CategorySourceConfig` → adapter → `TrendSnapshot` →
+   `TrendItem` architecture.
 
-Subreddits are curated manually and stored in the database. They are editable in the Django admin panel without a code deploy. Initial set:
+### 2.1 Current Verified Sources
 
-| Category | Subreddits |
+| Source | Categories Served | API / Access Method | Trend Signal | Status |
+|---|---|---|---|---|
+| Hacker News API | Tech | Free Firebase API — no auth | Points | Implemented |
+| DEV / Forem API | Tech | Public REST API — no auth | Reactions + comments | Implemented |
+| New York Times Most Popular API | News | API key | Most viewed rank | Implemented |
+| RAWG API | Gaming | API key | User library adds, rating/release metadata | Implemented |
+
+### 2.2 Deferred Sources
+
+| Source | Reason Deferred |
 |---|---|
-| Tech | r/technology, r/programming, r/webdev, r/MachineLearning, r/artificial, r/netsec |
-| Gaming | r/gaming, r/pcgaming, r/Games, r/gamedev, r/indiegaming |
-| News | r/worldnews, r/news, r/UpliftingNews, r/politics, r/science |
-| Finance | r/personalfinance, r/stocks, r/CryptoCurrency, r/investing |
-| Health | r/health, r/nutrition, r/fitness, r/mentalhealth |
-| Space | r/space, r/SpaceX, r/Astronomy, r/astrophysics |
-| Research | r/MachineLearning, r/datascience, r/science, r/AskScience |
-| TV/Movies | r/television, r/movies, r/netflix, r/anime |
-| Food | r/food, r/recipes, r/MealPrepSunday, r/EatCheapAndHealthy |
+| Reddit | API access is approval-gated and unreliable for this project as of 2026. Do not add Reddit back until access is approved and live fetches work. |
+| arXiv | Public and reliable, but weak for "trending" because it has no likes, points, views, or popularity metric. Revisit only with a research-specific ranking strategy. |
+| Steam / IGDB | Potentially useful for Gaming, but OAuth/API complexity is higher than RAWG. |
+| YouTube | Potentially useful, but quota and category mapping need separate verification. |
+| PubMed / NCBI | Public, but "trending" signal needs careful definition. |
+| TMDB | Good later candidate for TV/Movies, not required for the current three-category demo. |
+| NASA Open APIs | Good later candidate for Space, not required for the current three-category demo. |
+| Google Trends / pytrends | Useful for historical context, but unofficial and rate-limit sensitive. Not required for the first public demo. |
+
+### 2.3 Source Configuration
+
+Category and source mappings live in the database through
+`CategorySourceConfig`. Existing source adapters can be assigned to categories
+without changing the schema. A brand-new source type still requires a code
+deploy because it needs a new adapter and tests.
 
 ---
 
@@ -81,7 +103,7 @@ Requirements are tagged with their priority tier and the phase in which they wil
 
 | ID | Priority | Phase | Requirement |
 |---|---|---|---|
-| FR-01 | M | 1 | The system shall allow users to register and log in using Google OAuth. Session shall be managed via JWT stored in an HTTP-only cookie. |
+| FR-01 | M | 1 | The system shall allow users to register and log in using Django session authentication with email/password credentials. Session cookies and CSRF protection shall be used for browser clients. Google OAuth/JWT may be added later but is not required for the current public demo. |
 | FR-02 | C | 3 | On first login, the system shall present an interest onboarding flow where the user selects at least 3 categories. The flow is skippable; skipping defaults to all categories. |
 | FR-03 | M | 2 | The user shall be able to edit their category preferences directly from the dashboard via an inline sidebar or modal — without navigating to a settings page. |
 
@@ -92,11 +114,11 @@ Requirements are tagged with their priority tier and the phase in which they wil
 | ID | Priority | Phase | Requirement |
 |---|---|---|---|
 | FR-04 | M | 1 | The system shall display a home dashboard showing the top 5 trending items per category for each of the user's selected categories. |
-| FR-05 | M | 1 | The user shall be able to drill into any category to see a full ranked list of 10–20 trending items for that category. |
-| FR-06 | M | 1 | Each trend card shall display: title, source platform badge, score/metric (upvotes, views, or citations depending on source), a link to the original content, and — from Phase 2 — an AI-generated one-line summary. |
-| FR-07 | C | 2 | The user shall be able to filter trends by time window: today, last 7 days, last 30 days, last 90 days. Only time windows with existing snapshot data shall be selectable. |
-| FR-08 | C | 2 | Each category page shall display a trend chart showing relative topic interest over the available time window. The chart shall use stored snapshots for recent windows and Google Trends data for long-term historical curves. |
-| FR-09 | M | 2 | The user shall be able to filter which source platforms are shown (e.g. Reddit only, HN only, all sources). This filter operates on already-fetched data — it does not trigger new API calls. |
+| FR-05 | M | 1 | The user shall be able to drill into any category at `/category/[slug]` to see a paginated ranked list of stored trending items for that category. |
+| FR-06 | M | 1 | Each trend card shall display: title, source platform, score/metric (points, reactions, views, rank, adds, or source-specific equivalent), and links to the original/platform content. From Phase 2 onward it may also display an AI-generated one-line summary. |
+| FR-07 | C | 2/3 | The user shall be able to filter trends by time window: today, last 7 days, last 30 days, last 90 days. Only time windows with existing snapshot data shall be selectable. This should not block the first public demo if enough snapshot history has not accumulated. |
+| FR-08 | C | 2/3 | Each category page should display trend charts only after enough snapshot history exists to make the chart meaningful. |
+| FR-09 | M | 2 | The user shall be able to filter which source platforms are shown. This filter operates on already-fetched stored data and shall not trigger external API calls. |
 | FR-10 | C | 3 | The system shall surface a "trending everywhere" card at the top of a category when the same topic is detected trending on two or more platforms simultaneously. |
 
 ---
@@ -134,7 +156,7 @@ Requirements are tagged with their priority tier and the phase in which they wil
 | ID | Priority | Phase | Requirement |
 |---|---|---|---|
 | FR-19 | M | 1 | The Django admin panel shall display a log of all ingestion runs: source, items fetched, status (success/failure), error message if applicable, and timestamp. Admins shall be able to manually trigger a re-fetch for a specific source. |
-| FR-20 | C | 2 | Categories, subcategories, and the subreddit list per category shall be configurable via the Django admin panel without a code deploy. New categories that use existing source adapters (Reddit, HN, YouTube, arXiv) shall require only admin configuration. New source types require a code deploy. |
+| FR-20 | C | 2 | Categories, subcategories, and category-to-source mappings shall be configurable via the Django admin panel where possible. New categories that use existing source adapters require only configuration. New source types require live API verification, adapter code, tests, secrets if needed, and a code deploy. |
 
 ---
 
@@ -146,7 +168,7 @@ Requirements are tagged with their priority tier and the phase in which they wil
 | NFR-02 | Trend data shall be at most 24 hours stale. Each category page shall display a visible "last updated" timestamp. |
 | NFR-03 | If a data source fails, the failure shall not cascade to other sources or crash the ingestion job. Each adapter runs independently. |
 | NFR-04 | All API calls shall respect the rate limits of each source. The ingestion scheduler shall budget calls per source accordingly. |
-| NFR-05 | During Phase 1 and Phase 2, the Next.js frontend runs on localhost. The Django backend is deployed on GCP Cloud Run and accessible over HTTPS. CORS shall allow localhost:3000 during development. |
+| NFR-05 | During Phase 1, the Next.js frontend runs on localhost. During Phase 2, the frontend should be deployed to a public URL. CORS, CSRF trusted origins, and session cookie settings shall be configured separately for local and cloud environments. |
 | NFR-06 | All Gemini API calls shall occur only during the nightly ingestion batch job — never per user request. AI cost is fixed and predictable regardless of user count. |
 | NFR-07 | All API keys, credentials, and secrets shall be stored in GCP Secret Manager. They shall never be hardcoded in source code or committed to the repository. |
 | NFR-08 | Every push to the main branch shall trigger the CI/CD pipeline: lint (ruff), type check (mypy), tests (pytest), Docker build, push to Artifact Registry, deploy to Cloud Run. |
@@ -155,6 +177,10 @@ Requirements are tagged with their priority tier and the phase in which they wil
 ---
 
 ## 5. Categories & Subcategory Model
+
+The current public-demo baseline focuses on Tech, Gaming, and News because each
+has at least one verified source. Additional categories should be activated only
+after a suitable source is live-verified.
 
 Subcategories are defined in the data model from Phase 1 (self-referential FK on Category) but the UI for subcategory browsing is not activated until Phase 2 or later.
 
@@ -177,6 +203,18 @@ Subcategories are defined in the data model from Phase 1 (self-referential FK on
 | ID | Requirement | Reason Removed |
 |---|---|---|
 | FR-17 | Topic alerts (notify when a keyword trends) | Descoped — adds significant complexity (background monitoring, threshold logic, per-user matching) for a feature that overlaps with the weekly digest. Can be added post-launch if demand exists. |
+
+---
+
+## 7. Revised / Deferred Assumptions
+
+| Topic | Current Decision |
+|---|---|
+| Reddit | Deferred because API access is approval-gated and unreliable for this project. |
+| Google OAuth + JWT | Deferred; Django session auth is the current implementation. |
+| Public frontend deployment | Moved into Phase 2 so the project can be shared through a URL. |
+| Time windows and charts | Deferred until enough daily snapshots exist. |
+| New sources | Must be live API-verified before implementation. |
 
 ---
 

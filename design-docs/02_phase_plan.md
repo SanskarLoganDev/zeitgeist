@@ -1,8 +1,8 @@
-# TrendPulse — Phase & Delivery Plan
+# Zeitgeist — Phase & Delivery Plan
 
-**Version:** 1.0  
-**Status:** Approved  
-**Last Updated:** 2026-05-11
+**Version:** 2.0  
+**Status:** Revised after Phase 1 implementation decisions  
+**Last Updated:** 2026-07-06
 
 ---
 
@@ -10,25 +10,39 @@
 
 Each phase delivers a working, testable, deployable slice of the product. No phase ends with half-built features or speculative scaffolding. The exit gate for each phase must be passed before Phase N+1 begins.
 
+The source strategy was revised during implementation: new sources are added only
+after live API verification proves access, response shape, rate limits, and a
+usable trend signal. Do not add placeholder source models, secrets, or CD wiring
+for sources that have not been verified.
+
 **Sequencing logic:**
 
 1. **Phase 1 (Foundation)** answers the hardest infrastructure question first: can real data flow from external APIs into a database and out to a frontend reliably every day? Everything else builds on this.
-2. **Phase 2 (Intelligence)** adds AI and additional data sources only after the data pipeline is proven stable. Gemini prompts are written against real data — not hypothetical data.
-3. **Phase 3 (Polish & Ship)** deploys publicly only after the product is reliable. Cross-platform intelligence and email features require consistent, multi-week data history.
+2. **Phase 2 (Useful Product)** turns the current Tech/Gaming/News baseline into a public demo with useful category pages, source filters, saved preferences, AI summaries if feasible, and a deployed frontend.
+3. **Phase 3 (Intelligence & Polish)** adds cross-platform intelligence, onboarding, digest email, monitoring, and broader source/category expansion after the public baseline is stable.
 
 ---
 
 ## 2. Phase 1 — Foundation
 
-**Duration:** ~4 weeks  
-**Goal:** End-to-end data flow working. Reddit + Hacker News → Django → Postgres → Next.js dashboard on localhost. No AI. 3 categories.  
+**Duration:** Completed under revised local-first scope  
+**Goal:** End-to-end data flow working from verified public APIs → Django → Postgres → backend API → Next.js dashboard. No AI. 3 starter categories.  
 **Deployment:** Django backend on GCP Cloud Run. Next.js on localhost.
+
+Original Phase 1 assumed Reddit plus Google OAuth/JWT. During implementation,
+those assumptions changed:
+
+- Reddit was deferred because API access became approval-gated and unreliable.
+- Google OAuth/JWT was deferred in favor of Django session auth with
+  email/password, CSRF, and saved preferences.
+- Hacker News became the first proven end-to-end source; DEV, NYT, and RAWG
+  were added later after live API verification.
 
 ### 2.1 Requirements in Scope
 
 | FR ID | Requirement Summary |
 |---|---|
-| FR-01 | Google OAuth login + JWT auth |
+| FR-01 | Revised auth: Django session auth with email/password, CSRF, signup, login, logout, and saved preferences |
 | FR-04 | Home dashboard — top 5 per category |
 | FR-05 | Category detail page — top 10–20 items |
 | FR-06 | Trend cards (title, source badge, score, link) — no AI summary slot yet |
@@ -45,6 +59,8 @@ Each phase delivers a working, testable, deployable slice of the product. No pha
 - Source platform filter (FR-09)
 - Inline preference editing (FR-03)
 - Interest onboarding (FR-02)
+- Unverified source integrations
+- Reddit, unless API access is approved and verified
 - YouTube / arXiv / PubMed / TMDB / Steam sources
 - Redis cache (Postgres is sufficient at this scale)
 - Subcategory UI
@@ -67,80 +83,103 @@ Each phase delivers a working, testable, deployable slice of the product. No pha
 | Week | Focus | Key Deliverables |
 |---|---|---|
 | Week 1 | Project scaffold + CI/CD | Django project structure, Cloud SQL connected, GitHub Actions pipeline deploying to Cloud Run on green builds. Nothing functional yet — pipeline is the output. |
-| Week 2 | Data models + ingestion | Category, TrendItem, IngestionRun models. Reddit + HN adapters. Cloud Run Job + Cloud Scheduler running. First real data in Postgres. Django admin showing ingestion logs. |
-| Week 3 | API + auth + frontend skeleton | DRF endpoints for dashboard and category pages. Google OAuth + JWT. Next.js on localhost consuming the API. Trend cards rendering with real data. No UI polish yet. |
+| Week 2 | Data models + ingestion | Category, TrendItem, IngestionRun models. Hacker News adapter. Cloud Run Job + Cloud Scheduler running. First real data in Postgres. Django admin showing ingestion logs. |
+| Week 3 | API + auth + frontend skeleton | DRF endpoints for dashboard and category pages. Django session auth. Next.js on localhost consuming the API. Trend cards rendering with real data. |
 | Week 4 | Error handling + polish | FR-13 graceful failure. Stale data indicator. UI polish on trend cards and source badges. Phase 1 exit gate testing. |
 
 ### 2.5 Phase 1 Exit Gate
 
-Move to Phase 2 only when all three conditions are met:
+Move to Phase 2 only when these conditions are met:
 
-1. Daily ingestion has run successfully (data in Postgres) at least **3 consecutive times**
-2. Dashboard loads with real trend data in **under 2 seconds** from localhost
-3. Google OAuth login works reliably — user persists in DB, JWT is valid across page refreshes
+1. At least one verified source works end to end from external API to frontend.
+2. Dashboard loads with real trend data in **under 2 seconds** from localhost.
+3. User can register, log in, save preferences, refresh, and restore preferences locally.
+4. CI passes and CD deploys the backend health endpoint successfully.
 
 ---
 
-## 3. Phase 2 — Intelligence
+## 3. Phase 2 — Useful Product
 
-**Duration:** ~3–4 weeks  
-**Goal:** Make the data genuinely useful. Add AI summaries, trend charts, all 9 categories, additional sources, source filtering, and inline preference editing.  
-**Deployment:** Backend still on GCP Cloud Run. Frontend still on localhost. Redis cache added.
+**Duration:** In progress  
+**Goal:** Turn the current Tech/Gaming/News baseline into a usable public demo: real data in all three categories, useful category pages, source filtering, saved preferences, AI summaries if feasible, and a deployed frontend URL.  
+**Deployment:** Backend on GCP Cloud Run. Frontend moves from localhost to a public deployed URL during this phase.
 
 ### 3.1 Requirements in Scope
 
 | FR ID | Requirement Summary |
 |---|---|
-| FR-14 | Gemini category trend summaries — generated once per daily ingestion run, stored, displayed |
-| FR-09 | Source platform filter on dashboard and category pages |
 | FR-03 | Inline category preference editing from the dashboard |
-| FR-07 | Time window filter: today / 7d / 30d / 90d (only windows with real snapshot data) |
-| FR-08 | Trend charts per category using stored snapshots + Google Trends long-term curves |
-| FR-20 | Admin-configurable categories and subreddit lists (remaining 6 categories added here) |
+| FR-05 | Category detail pages with paginated stored trends |
+| FR-07 | Time window filter: today / 7d / 30d / 90d — only after enough snapshot history exists |
+| FR-08 | Trend charts per category — only after enough snapshot history exists |
+| FR-09 | Source platform filter on category pages; dashboard-level filter optional |
+| FR-14 | Gemini category trend summaries — generated once per ingestion run, stored, displayed |
+| FR-20 | Admin-configurable categories and source mappings |
 
-### 3.2 New Data Sources Added
+### 3.2 Current Verified Data Sources
 
-| Source | Categories Fed | Notes |
-|---|---|---|
-| YouTube Data API | Gaming, TV/Movies, Food | Trending videos by category + region. 10k units/day free. |
-| arXiv API | Research, AI, Space | Most-submitted papers by field. Completely free. |
-| PubMed / NCBI | Health, Research | Most-cited recent papers. Free with API key. |
-| TMDB API | TV/Movies | Trending movies and TV shows globally. Free API key. |
-| Steam Spy + IGDB | Gaming | Player counts + trending games. Free / Twitch OAuth. |
-| NASA Open APIs | Space | Astronomy, near-Earth objects, mission data. Free. |
+| Source | Category | Auth | Trend Signal | Status |
+|---|---|---|---|---|
+| Hacker News | Tech | None | Points | Implemented |
+| DEV / Forem | Tech | None | Reactions + comments | Implemented |
+| New York Times Most Popular | News | API key | Most viewed rank | Implemented |
+| RAWG | Gaming | API key | User library adds, rating/release metadata | Implemented |
 
-### 3.3 GCP Services — Changes in Phase 2
+### 3.3 Deferred Data Sources
+
+| Source | Reason Deferred |
+|---|---|
+| Reddit | API access is approval-gated and unreliable for this project as of 2026. Do not re-add unless access is approved and live fetches work. |
+| arXiv | Public and reliable, but weak for "trending" because it has no likes, points, views, or popularity metric. Revisit only with a research-specific ranking strategy. |
+| Steam / IGDB | Useful for Gaming but more complex than RAWG because of OAuth/API complexity. |
+| YouTube | Potentially useful, but quota and category mapping need separate verification. |
+| PubMed | Public, but "trending" signal needs careful definition. |
+| TMDB | Good later candidate for TV/Movies, not required for the current three-category demo. |
+| NASA | Good later candidate for Space, not required for the current three-category demo. |
+
+### 3.4 GCP Services — Changes in Phase 2
 
 | Service | Change | Notes |
 |---|---|---|
-| Vertex AI (Gemini) | **Added** | Called in ingestion Cloud Run Job only. ~9 calls/day. Near-zero cost at this volume. |
-| Memorystore (Redis) | **Added** | Cache for category dashboard responses. TTL 23 hours. Refreshed post-ingestion. |
-| Secret Manager | **Updated** | YouTube, TMDB, NASA, Gemini credentials added. |
-| Cloud Run Job | **Updated** | Ingestion job now runs all 9 source adapters + Gemini summary generation in sequence. |
+| Cloud Run (Frontend) | **Added** | Deploy Next.js to a public URL so the demo can be shared. |
+| Secret Manager | **Updated** | Add only verified source keys and Gemini key if AI summaries are implemented. |
+| Cloud Run Job | **Updated** | Ingestion job runs verified adapters only: HN, DEV, NYT, RAWG. |
+| Vertex AI / Gemini | **Optional in Phase 2** | Called during ingestion only, never per user request. |
+| Memorystore (Redis) | **Deferred unless needed** | Current traffic is small; Postgres-backed reads are acceptable until performance requires cache. |
 
-### 3.4 Week-by-Week Build Order
+### 3.5 Build Order
 
-| Week | Focus | Key Deliverables |
+| Step | Focus | Key Deliverables |
 |---|---|---|
-| Week 5 | New sources + Gemini summaries | YouTube, arXiv, PubMed, TMDB, Steam, NASA adapters. 6 remaining categories configured in admin. Gemini summary generation added to ingestion job. Prompt iteration against real data. |
-| Week 6 | Trend charts + time window filter | Recharts integration in Next.js. Snapshot-based recent curves. pytrends for long-term historical. Redis cache wired. |
-| Week 7–8 | Source filter + inline preferences + polish | FR-09 source filter UI. FR-03 inline category toggle. FR-20 admin category config validated. Phase 2 exit gate testing. |
+| 1 | Category page polish | Stable `/category/[slug]` pages, generic source filter buttons, clean pagination, consistent rank display |
+| 2 | Ingestion volume | Decide whether adapters should store 20, 50, or 100 items per source; update local/cloud ingestion if needed |
+| 3 | Preference UX | Finalize logged-in preference editing and anonymous behavior |
+| 4 | Public frontend deployment | Deploy Next.js and configure CORS/CSRF/session behavior for frontend + backend |
+| 5 | Cloud smoke testing | Verify public dashboard, category pages, auth, preferences, and ingestion freshness |
+| 6 | Gemini summaries | Add category summary model/management flow and generate summaries during ingestion, if still in Phase 2 scope |
 
-### 3.5 Phase 2 Exit Gate
+### 3.6 Phase 2 Exit Gate
 
-Move to Phase 3 only when all three conditions are met:
+Move to Phase 3 only when these conditions are met:
 
-1. Gemini summaries read **sensibly and usefully** for all 9 categories — iterate the prompt until they do
-2. Trend charts render correctly with **at least 2 weeks** of real snapshot data
-3. API responses stay **under 1 second** with Redis cache warm on a category page
+1. Public frontend URL works for anonymous users.
+2. Dashboard and category pages show real data for Tech, Gaming, and News.
+3. Source filters work from stored data and do not trigger external API calls.
+4. Logged-in users can save and restore category preferences in the deployed environment.
+5. Cloud ingestion runs successfully with HN, DEV, NYT, and RAWG.
+6. CI/CD deploys backend changes without manual database fixes.
+7. Gemini category summaries are generated once per ingestion run and displayed, or AI summaries are explicitly deferred with the rest of the product still public-demo ready.
+
+Time-window filters and charts require accumulated snapshot history. They should
+not block the first public demo unless enough daily snapshots exist.
 
 ---
 
-## 4. Phase 3 — Polish & Ship
+## 4. Phase 3 — Intelligence & Polish
 
 **Duration:** ~2–3 weeks  
-**Goal:** Deploy the frontend publicly, add cross-platform topic intelligence, email digest, onboarding, and sentiment tags. Full public launch.  
-**Deployment:** Next.js frontend deployed (Cloud Run or Vercel). Backend on GCP Cloud Run with production configuration.
+**Goal:** Add cross-platform topic intelligence, digest email, onboarding, monitoring, and broader source/category expansion after the public Phase 2 baseline is stable.  
+**Deployment:** Frontend and backend already public from Phase 2; Phase 3 hardens the product.
 
 ### 4.1 Requirements in Scope
 
@@ -156,7 +195,7 @@ Move to Phase 3 only when all three conditions are met:
 
 | Service | Change | Notes |
 |---|---|---|
-| Cloud Run (Frontend) | **Added** | Next.js deployed as a Cloud Run service, or Vercel. CORS updated to production domain. |
+| Cloud Run (Frontend) | **Hardened** | Frontend should already be deployed from Phase 2; Phase 3 adds monitoring/custom domain polish if needed. |
 | Cloud Scheduler | **Updated** | Second job added: weekly digest email trigger every Monday 08:00 UTC. |
 | SendGrid | **Added** | Email delivery for weekly digest. Free tier: 100 emails/day. API key in Secret Manager. |
 | Cloud Monitoring | **Added** | Uptime checks, ingestion failure alerts, error rate alerts. Required before public launch. |
@@ -169,7 +208,7 @@ Move to Phase 3 only when all three conditions are met:
 |---|---|---|
 | Week 9 | Cross-platform detection + sentiment | FR-15 embedding job post-ingestion. FR-10 "trending everywhere" cards in frontend. FR-16 Gemini sentiment tags on cards. |
 | Week 10 | Email digest + onboarding | FR-18 weekly digest with SendGrid. FR-02 first-login onboarding flow. Cloud Monitoring alerts configured. |
-| Week 11 | Public deploy + launch | Next.js deployed to Cloud Run or Vercel. Custom domain + SSL. Load test (50 concurrent users, all responses < 500ms with warm cache). Phase 3 exit gate. Ship. |
+| Week 11 | Launch hardening | Custom domain + SSL if needed. Load test (50 concurrent users, all responses < 500ms with warm cache). Phase 3 exit gate. Ship. |
 
 ### 4.4 Phase 3 Exit Gate — Public Launch Checklist
 
@@ -179,7 +218,7 @@ Move to Phase 3 only when all three conditions are met:
 | Email digest | Digest has been sent to internal testers for at least 2 weeks and reads well across all categories |
 | Cross-platform detection | Known cross-platform events (major AI release, game launch) are correctly surfaced with the badge |
 | Load test | 50 concurrent users on dashboard — all responses under 500ms with Redis warm |
-| Auth | OAuth login works on production domain (not just localhost) |
+| Auth | Session auth works on production domain; OAuth remains optional future enhancement |
 | CORS | Localhost:3000 origin removed from production CORS config |
 
 ---
@@ -188,27 +227,41 @@ Move to Phase 3 only when all three conditions are met:
 
 | FR ID | Phase | Must/Could | Status |
 |---|---|---|---|
-| FR-01 | 1 | Must | Planned |
+| FR-01 | 1 | Must | Revised and implemented with Django session auth |
 | FR-02 | 3 | Could | Planned |
-| FR-03 | 2 | Must | Planned |
-| FR-04 | 1 | Must | Planned |
-| FR-05 | 1 | Must | Planned |
-| FR-06 | 1 | Must | Planned |
-| FR-07 | 2 | Could | Planned |
-| FR-08 | 2 | Could | Planned |
-| FR-09 | 2 | Must | Planned |
+| FR-03 | 2 | Must | In progress |
+| FR-04 | 1 | Must | Implemented |
+| FR-05 | 1/2 | Must | Implemented; polishing in Phase 2 |
+| FR-06 | 1 | Must | Implemented |
+| FR-07 | 2/3 | Could | Deferred until enough snapshots exist |
+| FR-08 | 2/3 | Could | Deferred until enough snapshots exist |
+| FR-09 | 2 | Must | Implemented on category pages |
 | FR-10 | 3 | Could | Planned |
-| FR-11 | 1 | Must | Planned |
-| FR-12 | 1 | Must | Planned |
-| FR-13 | 1 | Must | Planned |
+| FR-11 | 1 | Must | Implemented |
+| FR-12 | 1 | Must | Implemented |
+| FR-13 | 1 | Must | Initial implementation; continue polishing |
 | FR-14 | 2 | Must | Planned |
 | FR-15 | 3 | Could | Planned |
 | FR-16 | 3 | Could | Planned |
 | FR-17 | — | Removed | Descoped |
 | FR-18 | 3 | Must | Planned |
-| FR-19 | 1 | Must | Planned |
-| FR-20 | 2 | Could | Planned |
-| NFR-01 to NFR-09 | All | Must | Planned |
+| FR-19 | 1 | Must | Implemented |
+| FR-20 | 2 | Could | Partially implemented |
+| NFR-01 to NFR-09 | All | Must | In progress |
+
+---
+
+## 6. Near-Term Plan
+
+The next work should stay focused on getting a successful public Phase 2 demo:
+
+1. Finish category detail polish and verify it locally with Tech, Gaming, and News.
+2. Decide whether to increase ingestion item count beyond 20 per source.
+3. Run local ingestion and verify dashboard/category pages from the database.
+4. Deploy backend changes through CI/CD.
+5. Deploy the Next.js frontend to a public URL.
+6. Configure cloud CORS, CSRF, and session cookie behavior for frontend + backend.
+7. Add Gemini category summaries only after the public dashboard flow is stable.
 
 ---
 

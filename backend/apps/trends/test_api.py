@@ -119,18 +119,25 @@ def test_dashboard_returns_latest_hackernews_items(
 
 
 @pytest.mark.django_db
-def test_category_trends_supports_limit_query_param(
+def test_category_trends_supports_page_size_query_param(
     api_client: Client,
     hackernews_snapshot: TrendSnapshot,
 ) -> None:
     del hackernews_snapshot
 
-    response = api_client.get("/api/v1/categories/tech/trends/?limit=1")
+    response = api_client.get("/api/v1/categories/tech/trends/?page_size=1")
 
     assert response.status_code == 200
-    source = response.json()["sources"][0]
-    assert len(source["items"]) == 1
-    assert source["items"][0]["rank"] == 1
+    payload = response.json()
+    assert len(payload["items"]) == 1
+    assert payload["items"][0]["rank"] == 1
+    assert payload["pagination"] == {
+        "page": 1,
+        "page_size": 1,
+        "total_items": 2,
+        "total_pages": 2,
+        "max_items": 100,
+    }
 
 
 @pytest.mark.django_db
