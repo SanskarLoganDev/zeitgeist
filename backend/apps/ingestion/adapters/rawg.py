@@ -48,7 +48,7 @@ class RawgAdapter(BaseSourceAdapter[RawgGame]):
     def get_source_name(cls) -> str:
         return cls.source_name
 
-    def fetch(self, category: Category, *, limit: int = 20) -> list[RawgGame]:
+    def fetch(self, category: Category, *, limit: int = 50) -> list[RawgGame]:
         if not self.api_key:
             raise RuntimeError("RAWG_API_KEY is required for RAWG ingestion")
 

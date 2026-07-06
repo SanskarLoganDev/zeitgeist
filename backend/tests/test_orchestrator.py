@@ -12,7 +12,7 @@ class SuccessfulAdapter(BaseSourceAdapter[dict[str, str]]):
     def get_source_name(cls) -> str:
         return "successful"
 
-    def fetch(self, category: Category, *, limit: int = 20) -> list[dict[str, str]]:
+    def fetch(self, category: Category, *, limit: int = 50) -> list[dict[str, str]]:
         return [{"title": "First story"}, {"title": "Second story"}][:limit]
 
     def normalise(
@@ -37,7 +37,7 @@ class FailingAdapter(BaseSourceAdapter[dict[str, str]]):
     def get_source_name(cls) -> str:
         return "failing"
 
-    def fetch(self, category: Category, *, limit: int = 20) -> list[dict[str, str]]:
+    def fetch(self, category: Category, *, limit: int = 50) -> list[dict[str, str]]:
         raise RuntimeError("external API unavailable")
 
     def normalise(

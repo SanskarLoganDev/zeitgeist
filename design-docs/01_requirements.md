@@ -128,7 +128,7 @@ Requirements are tagged with their priority tier and the phase in which they wil
 | ID | Priority | Phase | Requirement |
 |---|---|---|---|
 | FR-11 | M | 1 | The system shall automatically fetch trend data from all configured sources once per day at 03:00 UTC via Cloud Scheduler. No manual trigger shall be required for normal operation. |
-| FR-12 | M | 1 | Each ingestion run shall store a timestamped snapshot of the top items per category. This snapshot data is the basis for all historical trend views. Snapshot storage begins from the first run — retroactive collection is not possible. |
+| FR-12 | M | 1 | Each ingestion run shall store a timestamped snapshot of up to 50 top items per source where the upstream API supports that many results. This snapshot data is the basis for all historical trend views. Snapshot storage begins from the first run — retroactive collection is not possible. |
 | FR-13 | M | 1 | If a source API fails or rate-limits during ingestion, the system shall log the failure, skip that source, continue with remaining sources, and serve the most recent successful snapshot for the affected category with a visible "last updated X hours ago" indicator. |
 
 ---

@@ -14,7 +14,7 @@ class FakeAdapter(BaseSourceAdapter[FakeRawItem]):
     def get_source_name(cls) -> str:
         return "fake"
 
-    def fetch(self, category: Category, *, limit: int = 20) -> list[FakeRawItem]:
+    def fetch(self, category: Category, *, limit: int = 50) -> list[FakeRawItem]:
         return [
             {"title": f"Item {index}", "score": 100 - index}
             for index in range(1, limit + 1)

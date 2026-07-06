@@ -59,7 +59,7 @@ class HackerNewsAdapter(BaseSourceAdapter[HackerNewsItem]):
     def get_source_name(cls) -> str:
         return cls.source_name
 
-    def fetch(self, category: Category, *, limit: int = 20) -> list[HackerNewsItem]:
+    def fetch(self, category: Category, *, limit: int = 50) -> list[HackerNewsItem]:
         top_story_ids = self._fetch_top_story_ids()
         stories: list[HackerNewsItem] = []
 

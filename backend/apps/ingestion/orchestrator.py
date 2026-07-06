@@ -63,7 +63,7 @@ ADAPTER_REGISTRY: AdapterRegistry = {
     RawgAdapter.get_source_name(): RawgAdapter,
 }
 
-DEFAULT_ITEM_LIMIT = 20
+DEFAULT_ITEM_LIMIT = 50
 
 
 def run() -> int:

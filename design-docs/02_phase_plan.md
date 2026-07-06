@@ -152,7 +152,7 @@ Move to Phase 2 only when these conditions are met:
 | Step | Focus | Key Deliverables |
 |---|---|---|
 | 1 | Category page polish | Stable `/category/[slug]` pages, generic source filter buttons, clean pagination, consistent rank display |
-| 2 | Ingestion volume | Decide whether adapters should store 20, 50, or 100 items per source; update local/cloud ingestion if needed |
+| 2 | Ingestion volume | Store up to 50 items per source; local/cloud ingestion should be rerun after deploy to populate the larger snapshots |
 | 3 | Preference UX | Finalize logged-in preference editing and anonymous behavior |
 | 4 | Public frontend deployment | Deploy Next.js and configure CORS/CSRF/session behavior for frontend + backend |
 | 5 | Cloud smoke testing | Verify public dashboard, category pages, auth, preferences, and ingestion freshness |
@@ -256,7 +256,7 @@ not block the first public demo unless enough daily snapshots exist.
 The next work should stay focused on getting a successful public Phase 2 demo:
 
 1. Finish category detail polish and verify it locally with Tech, Gaming, and News.
-2. Decide whether to increase ingestion item count beyond 20 per source.
+2. Store up to 50 items per source and rerun ingestion locally/cloud after deploy.
 3. Run local ingestion and verify dashboard/category pages from the database.
 4. Deploy backend changes through CI/CD.
 5. Deploy the Next.js frontend to a public URL.

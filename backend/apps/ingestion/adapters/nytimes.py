@@ -42,7 +42,7 @@ class NYTimesMostPopularAdapter(BaseSourceAdapter[NYTimesArticle]):
     def get_source_name(cls) -> str:
         return cls.source_name
 
-    def fetch(self, category: Category, *, limit: int = 20) -> list[NYTimesArticle]:
+    def fetch(self, category: Category, *, limit: int = 50) -> list[NYTimesArticle]:
         if not self.api_key:
             raise RuntimeError("NYTIMES_API_KEY is required for NYTimes ingestion")
 

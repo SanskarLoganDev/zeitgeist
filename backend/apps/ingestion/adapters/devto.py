@@ -38,7 +38,7 @@ class DevToAdapter(BaseSourceAdapter[DevToArticle]):
     def get_source_name(cls) -> str:
         return cls.source_name
 
-    def fetch(self, category: Category, *, limit: int = 20) -> list[DevToArticle]:
+    def fetch(self, category: Category, *, limit: int = 50) -> list[DevToArticle]:
         response = self.session.get(
             self.articles_url,
             params={

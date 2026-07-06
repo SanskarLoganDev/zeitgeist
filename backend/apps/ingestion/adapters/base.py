@@ -72,7 +72,7 @@ class BaseSourceAdapter(ABC, Generic[RawItem]):
     coordination code.
     """
 
-    default_limit = 20
+    default_limit = 50
 
     @classmethod
     @abstractmethod
