@@ -92,6 +92,7 @@ class CategorySourceConfig(models.Model):
     SOURCE_HACKERNEWS = "hackernews"
     SOURCE_DEVTO = "devto"
     SOURCE_NYTIMES = "nytimes"
+    SOURCE_RAWG = "rawg"
     SOURCE_YOUTUBE = "youtube"        # Phase 2
     SOURCE_ARXIV = "arxiv"            # Phase 2
     SOURCE_PUBMED = "pubmed"          # Phase 2
@@ -102,6 +103,7 @@ class CategorySourceConfig(models.Model):
         (SOURCE_HACKERNEWS, "Hacker News"),
         (SOURCE_DEVTO, "DEV"),
         (SOURCE_NYTIMES, "New York Times"),
+        (SOURCE_RAWG, "RAWG"),
         (SOURCE_YOUTUBE, "YouTube"),
         (SOURCE_ARXIV, "arXiv"),
         (SOURCE_PUBMED, "PubMed"),
