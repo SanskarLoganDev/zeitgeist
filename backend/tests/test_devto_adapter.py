@@ -60,7 +60,7 @@ def test_fetch_returns_valid_dev_articles_only() -> None:
     assert items[0]["title"] == "My Next.js 16 Auth Passed Every Test"
     assert session.requested_url == DevToAdapter.articles_url
     assert session.requested_kwargs["params"] == {
-        "top": 7,
+        "top": 30,
         "per_page": 5,
     }
 

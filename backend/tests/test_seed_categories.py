@@ -20,6 +20,18 @@ def test_seed_categories_maps_tech_to_hackernews_and_devto() -> None:
 
 
 @pytest.mark.django_db
+def test_seed_categories_maps_news_to_nytimes() -> None:
+    call_command("seed_categories")
+
+    news = Category.objects.get(slug="news")
+    sources = set(
+        CategorySourceConfig.objects.filter(category=news).values_list("source", flat=True)
+    )
+
+    assert sources == {CategorySourceConfig.SOURCE_NYTIMES}
+
+
+@pytest.mark.django_db
 def test_seed_categories_removes_deprecated_reddit_source_configs() -> None:
     tech = Category.objects.create(name="Tech", slug="tech", icon="tech")
     CategorySourceConfig.objects.create(category=tech, source="reddit")

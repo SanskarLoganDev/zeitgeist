@@ -46,6 +46,7 @@ from apps.categories.models import Category
 from apps.ingestion.adapters.base import BaseSourceAdapter, NormalizedTrendItem
 from apps.ingestion.adapters.devto import DevToAdapter
 from apps.ingestion.adapters.hackernews import HackerNewsAdapter
+from apps.ingestion.adapters.nytimes import NYTimesMostPopularAdapter
 from apps.ingestion.models import IngestionRun
 from apps.trends.models import TrendItem, TrendSnapshot
 
@@ -57,6 +58,7 @@ AdapterRegistry: TypeAlias = Mapping[str, type[SourceAdapter]]  # noqa: UP040
 ADAPTER_REGISTRY: AdapterRegistry = {
     DevToAdapter.get_source_name(): DevToAdapter,
     HackerNewsAdapter.get_source_name(): HackerNewsAdapter,
+    NYTimesMostPopularAdapter.get_source_name(): NYTimesMostPopularAdapter,
 }
 
 DEFAULT_ITEM_LIMIT = 20

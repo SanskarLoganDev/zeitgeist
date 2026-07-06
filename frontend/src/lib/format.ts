@@ -2,7 +2,8 @@ import type { FreshnessStatus } from "../types";
 
 const SOURCE_LABELS: Record<string, string> = {
   devto: "DEV",
-  hackernews: "Hacker News"
+  hackernews: "Hacker News",
+  nytimes: "New York Times"
 };
 
 export function formatSource(source: string): string {

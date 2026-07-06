@@ -83,6 +83,7 @@ class TrendItem(models.Model):
     score and score_label are normalised across sources:
       HN        → points,              score_label="points"
       DEV       → reactions + comments, score_label="engagement"
+      NYTimes   → rank-derived score,  score_label="most viewed"
       YouTube   → view count,          score_label="views"
       arXiv     → rank,                score_label="recent submissions"
       PubMed    → citations,           score_label="citations"
@@ -95,6 +96,7 @@ class TrendItem(models.Model):
 
     SOURCE_HACKERNEWS = "hackernews"
     SOURCE_DEVTO = "devto"
+    SOURCE_NYTIMES = "nytimes"
     SOURCE_YOUTUBE = "youtube"
     SOURCE_ARXIV = "arxiv"
     SOURCE_PUBMED = "pubmed"
@@ -104,6 +106,7 @@ class TrendItem(models.Model):
     SOURCE_CHOICES = [
         (SOURCE_HACKERNEWS, "Hacker News"),
         (SOURCE_DEVTO, "DEV"),
+        (SOURCE_NYTIMES, "New York Times"),
         (SOURCE_YOUTUBE, "YouTube"),
         (SOURCE_ARXIV, "arXiv"),
         (SOURCE_PUBMED, "PubMed"),

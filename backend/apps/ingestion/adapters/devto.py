@@ -28,7 +28,7 @@ class DevToArticle(TypedDict):
 class DevToAdapter(BaseSourceAdapter[DevToArticle]):
     source_name = "devto"
     articles_url = "https://dev.to/api/articles"
-    top_days = 7
+    top_days = 30
     request_timeout_seconds = 10
 
     def __init__(self, session: requests.Session | None = None) -> None:

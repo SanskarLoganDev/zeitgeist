@@ -41,7 +41,7 @@ STARTER_CATEGORIES: list[StarterCategory] = [
         "name": "News",
         "slug": "news",
         "icon": "news",
-        "sources": [],
+        "sources": [CategorySourceConfig.SOURCE_NYTIMES],
     },
 ]
 
