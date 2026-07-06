@@ -47,6 +47,8 @@ from apps.trends.serializers import TrendItemSerializer
 
 DEFAULT_ITEM_LIMIT = 20
 MAX_ITEM_LIMIT = 50
+CATEGORY_PAGE_SIZE = 10
+CATEGORY_MAX_ITEMS = 100
 FRESHNESS_WINDOW = timedelta(hours=25)
 
 
@@ -76,18 +78,20 @@ class DashboardView(APIView):
 
 
 class CategoryTrendsView(APIView):
-    """Return latest stored trends for one active category."""
+    """Return a paginated top-items view for one active category."""
 
     def get(self, request: Request, slug: str) -> Response:
         category = _get_active_category(slug)
         source = request.query_params.get("source")
-        limit = _parse_limit(request.query_params.get("limit"))
+        page = _parse_positive_int(request.query_params.get("page"), default=1)
+        page_size = _parse_page_size(request.query_params.get("page_size"))
 
         return Response(
-            _build_category_payload(
+            _build_category_detail_payload(
                 category,
                 source_filter=source,
-                limit=limit,
+                page=page,
+                page_size=page_size,
             )
         )
 
@@ -115,6 +119,25 @@ def _parse_limit(raw_limit: str | None) -> int:
     if parsed_limit < 1:
         return DEFAULT_ITEM_LIMIT
     return min(parsed_limit, MAX_ITEM_LIMIT)
+
+
+def _parse_positive_int(raw_value: str | None, *, default: int) -> int:
+    if raw_value is None:
+        return default
+
+    try:
+        parsed_value = int(raw_value)
+    except ValueError:
+        return default
+
+    if parsed_value < 1:
+        return default
+    return parsed_value
+
+
+def _parse_page_size(raw_page_size: str | None) -> int:
+    page_size = _parse_positive_int(raw_page_size, default=CATEGORY_PAGE_SIZE)
+    return min(page_size, CATEGORY_PAGE_SIZE)
 
 
 def _build_category_payload(
@@ -147,6 +170,62 @@ def _build_category_payload(
     }
 
 
+def _build_category_detail_payload(
+    category: Category,
+    *,
+    source_filter: str | None,
+    page: int,
+    page_size: int,
+) -> dict[str, Any]:
+    source_configs = _active_source_configs(category)
+    filtered_source_configs = source_configs
+    if source_filter is not None:
+        filtered_source_configs = [
+            source_config
+            for source_config in source_configs
+            if source_config.source == source_filter
+        ]
+
+    sources = [
+        _build_source_status_payload(category=category, source=source_config.source)
+        for source_config in source_configs
+    ]
+    snapshots = [
+        snapshot
+        for source_config in filtered_source_configs
+        if (snapshot := _latest_snapshot(category=category, source=source_config.source)) is not None
+    ]
+
+    capped_items = list(
+        TrendItem.objects.filter(snapshot__in=snapshots)
+        .order_by("-score", "rank", "source")[:CATEGORY_MAX_ITEMS]
+    )
+    total_items = len(capped_items)
+    total_pages = (total_items + page_size - 1) // page_size
+    if total_pages == 0:
+        page = 1
+    else:
+        page = min(page, total_pages)
+    start_index = (page - 1) * page_size
+    end_index = start_index + page_size
+
+    return {
+        "id": category.id,
+        "name": category.name,
+        "slug": category.slug,
+        "icon": category.icon,
+        "sources": sources,
+        "items": TrendItemSerializer(capped_items[start_index:end_index], many=True).data,
+        "pagination": {
+            "page": page,
+            "page_size": page_size,
+            "total_items": total_items,
+            "total_pages": total_pages,
+            "max_items": CATEGORY_MAX_ITEMS,
+        },
+    }
+
+
 def _active_source_configs(category: Category) -> list[CategorySourceConfig]:
     source_configs = getattr(category, "_prefetched_objects_cache", {}).get("source_configs")
     if source_configs is None:
@@ -176,14 +255,26 @@ def _build_source_payload(
 
     return {
         "source": source,
-        "last_updated": (
-            ingestion_run.completed_at.isoformat()
-            if ingestion_run is not None and ingestion_run.completed_at is not None
-            else None
-        ),
+        "last_updated": _completed_at_value(ingestion_run),
         "status": _freshness_status(ingestion_run),
         "items": TrendItemSerializer(items, many=True).data,
     }
+
+
+def _build_source_status_payload(*, category: Category, source: str) -> dict[str, str | None]:
+    ingestion_run = _latest_successful_run(category=category, source=source)
+
+    return {
+        "source": source,
+        "last_updated": _completed_at_value(ingestion_run),
+        "status": _freshness_status(ingestion_run),
+    }
+
+
+def _completed_at_value(ingestion_run: IngestionRun | None) -> str | None:
+    if ingestion_run is None or ingestion_run.completed_at is None:
+        return None
+    return ingestion_run.completed_at.isoformat()
 
 
 def _latest_snapshot(*, category: Category, source: str) -> TrendSnapshot | None:

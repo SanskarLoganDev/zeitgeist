@@ -1,6 +1,6 @@
 import type { Category, CategoryTrendsResponse, DashboardResponse } from "../types";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000/api/v1";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000/api/v1";
 
 type FetchOptions = {
   next?: {
@@ -32,8 +32,24 @@ export function getDashboard(): Promise<DashboardResponse> {
   return fetchJson<DashboardResponse>("/dashboard/", { next: { revalidate: 60 } });
 }
 
-export function getCategoryTrends(slug: string, limit = 20): Promise<CategoryTrendsResponse> {
-  return fetchJson<CategoryTrendsResponse>(`/categories/${slug}/trends/?limit=${limit}`, {
+type CategoryTrendsOptions = {
+  page?: number;
+  pageSize?: number;
+  source?: string;
+};
+
+export function getCategoryTrends(
+  slug: string,
+  { page = 1, pageSize = 10, source }: CategoryTrendsOptions = {}
+): Promise<CategoryTrendsResponse> {
+  const params = new URLSearchParams({
+    page: String(page),
+    page_size: String(pageSize)
+  });
+  if (source !== undefined) {
+    params.set("source", source);
+  }
+  return fetchJson<CategoryTrendsResponse>(`/categories/${slug}/trends/?${params.toString()}`, {
     next: { revalidate: 60 }
   });
 }

@@ -14,6 +14,7 @@ class TrendItemSerializer(serializers.ModelSerializer[TrendItem]):
     class Meta:
         model = TrendItem
         fields = [
+            "source",
             "rank",
             "title",
             "url",

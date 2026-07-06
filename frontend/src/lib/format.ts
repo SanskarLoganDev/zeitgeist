@@ -7,8 +7,19 @@ const SOURCE_LABELS: Record<string, string> = {
   rawg: "RAWG"
 };
 
+const SOURCE_SHORT_LABELS: Record<string, string> = {
+  devto: "DEV",
+  hackernews: "HN",
+  nytimes: "NYT",
+  rawg: "RAWG"
+};
+
 export function formatSource(source: string): string {
   return SOURCE_LABELS[source] ?? source;
+}
+
+export function formatSourceShort(source: string): string {
+  return SOURCE_SHORT_LABELS[source] ?? formatSource(source);
 }
 
 export function formatLastUpdated(value: string | null): string {

@@ -10,6 +10,7 @@ export type Category = {
 };
 
 export type TrendItem = {
+  source: string;
   rank: number;
   title: string;
   url: string;
@@ -39,7 +40,29 @@ export type DashboardResponse = {
   categories: DashboardCategory[];
 };
 
-export type CategoryTrendsResponse = DashboardCategory;
+export type CategorySourceStatus = {
+  source: string;
+  last_updated: string | null;
+  status: FreshnessStatus;
+};
+
+export type CategoryTrendsPagination = {
+  page: number;
+  page_size: number;
+  total_items: number;
+  total_pages: number;
+  max_items: number;
+};
+
+export type CategoryTrendsResponse = {
+  id: number;
+  name: string;
+  slug: string;
+  icon: string;
+  sources: CategorySourceStatus[];
+  items: TrendItem[];
+  pagination: CategoryTrendsPagination;
+};
 
 export type User = {
   id: number;
