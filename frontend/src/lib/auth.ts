@@ -118,14 +118,18 @@ async function patchJson<T>(path: string, body: object): Promise<T> {
 }
 
 export async function getCurrentUser(): Promise<AuthState> {
-  const response = await fetch(`${API_BASE_URL}/auth/me/`, {
-    credentials: "include"
-  });
-  if (!response.ok) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/auth/me/`, {
+      credentials: "include"
+    });
+    if (!response.ok) {
+      return { authenticated: false, user: null };
+    }
+
+    return response.json() as Promise<AuthState>;
+  } catch {
     return { authenticated: false, user: null };
   }
-
-  return response.json() as Promise<AuthState>;
 }
 
 export function register(input: AuthInput): Promise<AuthState> {
@@ -141,14 +145,18 @@ export function logout(): Promise<AuthState> {
 }
 
 export async function getSavedPreferences(): Promise<CategoryPreferenceState> {
-  const response = await fetch(`${API_BASE_URL}/categories/preferences/`, {
-    credentials: "include"
-  });
-  if (!response.ok) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/categories/preferences/`, {
+      credentials: "include"
+    });
+    if (!response.ok) {
+      return { can_save: false, selected_slugs: [] };
+    }
+
+    return response.json() as Promise<CategoryPreferenceState>;
+  } catch {
     return { can_save: false, selected_slugs: [] };
   }
-
-  return response.json() as Promise<CategoryPreferenceState>;
 }
 
 export function savePreferences(selectedSlugs: string[]): Promise<CategoryPreferenceState> {
