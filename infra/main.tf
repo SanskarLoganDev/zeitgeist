@@ -50,7 +50,7 @@ module "cloud_run" {
   cors_allowed_origins  = var.cors_allowed_origins
   github_repository     = var.github_repository
   wif_pool_id           = var.workload_identity_pool_id
-  depends_on            = [module.cloud_sql, module.artifact_registry, module.secrets]
+  depends_on            = [module.cloud_sql, module.artifact_registry]
 }
 
 module "scheduler" {
