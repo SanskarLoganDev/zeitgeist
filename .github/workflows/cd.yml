@@ -201,7 +201,10 @@ jobs:
             --region ${{ env.GCP_REGION }} \
             --project ${{ env.GCP_PROJECT_ID }} \
             --format 'value(status.url)')
-          TRUSTED_ORIGINS="http://localhost:3000,$FRONTEND_URL"
+          PROJECT_NUMBER=$(gcloud projects describe ${{ env.GCP_PROJECT_ID }} \
+            --format 'value(projectNumber)')
+          FRONTEND_REGIONAL_URL="https://zeitgeist-frontend-$PROJECT_NUMBER.${{ env.GCP_REGION }}.run.app"
+          TRUSTED_ORIGINS="http://localhost:3000,$FRONTEND_URL,$FRONTEND_REGIONAL_URL"
 
           gcloud run services update zeitgeist-api \
             --image ${{ env.REGISTRY }}/${{ env.REPO }}/api:${{ github.sha }} \
