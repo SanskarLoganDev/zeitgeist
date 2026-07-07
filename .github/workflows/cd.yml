@@ -81,9 +81,30 @@ jobs:
           docker push ${{ env.REGISTRY }}/${{ env.REPO }}/job:${{ github.sha }}
           docker push ${{ env.REGISTRY }}/${{ env.REPO }}/job:latest
 
+      - name: Build frontend image
+        working-directory: frontend
+        run: |
+          API_URL=$(gcloud run services describe zeitgeist-api \
+            --region ${{ env.GCP_REGION }} \
+            --project ${{ env.GCP_PROJECT_ID }} \
+            --format 'value(status.url)')
+
+          docker build \
+            --build-arg NEXT_PUBLIC_API_BASE_URL="$API_URL/api/v1" \
+            --tag ${{ env.REGISTRY }}/${{ env.REPO }}/frontend:${{ github.sha }} \
+            --tag ${{ env.REGISTRY }}/${{ env.REPO }}/frontend:latest \
+            --file Dockerfile \
+            .
+
+      - name: Push frontend image
+        run: |
+          docker push ${{ env.REGISTRY }}/${{ env.REPO }}/frontend:${{ github.sha }}
+          docker push ${{ env.REGISTRY }}/${{ env.REPO }}/frontend:latest
+
       # ── Run database setup BEFORE switching traffic ─────────────────────────
-      # ALLOWED_HOSTS and CORS_ALLOWED_ORIGINS must be set even for the migration
-      # job — Django runs system checks at startup before management commands run.
+      # ALLOWED_HOSTS, CORS_ALLOWED_ORIGINS, and CSRF_TRUSTED_ORIGINS must be set
+      # even for the migration job — Django runs system checks at startup before
+      # management commands run.
       # This reuses one Cloud Run Job instead of creating zeitgeist-migrate-N on
       # every deploy.
       - name: Ensure database maintenance job exists
@@ -102,7 +123,7 @@ jobs:
               --set-cloudsql-instances ${{ secrets.CLOUD_SQL_CONNECTION_NAME }} \
               --service-account ${{ secrets.GCP_APP_SA_EMAIL }} \
               --set-secrets "DJANGO_SECRET_KEY=django-secret-key:latest,DB_PASSWORD=db-password:latest" \
-              --set-env-vars "DB_HOST=/cloudsql/${{ secrets.CLOUD_SQL_CONNECTION_NAME }},DB_NAME=zeitgeist,DB_USER=zeitgeist,DJANGO_SETTINGS_MODULE=config.settings.production,ALLOWED_HOSTS=localhost,CORS_ALLOWED_ORIGINS=http://localhost:3000" \
+              --set-env-vars "DB_HOST=/cloudsql/${{ secrets.CLOUD_SQL_CONNECTION_NAME }},DB_NAME=zeitgeist,DB_USER=zeitgeist,DJANGO_SETTINGS_MODULE=config.settings.production,ALLOWED_HOSTS=localhost,CORS_ALLOWED_ORIGINS=http://localhost:3000,CSRF_TRUSTED_ORIGINS=http://localhost:3000" \
               --max-retries 1
           fi
 
@@ -117,7 +138,7 @@ jobs:
             --set-cloudsql-instances ${{ secrets.CLOUD_SQL_CONNECTION_NAME }} \
             --service-account ${{ secrets.GCP_APP_SA_EMAIL }} \
             --set-secrets "DJANGO_SECRET_KEY=django-secret-key:latest,DB_PASSWORD=db-password:latest" \
-            --set-env-vars "DB_HOST=/cloudsql/${{ secrets.CLOUD_SQL_CONNECTION_NAME }},DB_NAME=zeitgeist,DB_USER=zeitgeist,DJANGO_SETTINGS_MODULE=config.settings.production,ALLOWED_HOSTS=localhost,CORS_ALLOWED_ORIGINS=http://localhost:3000" \
+            --set-env-vars "DB_HOST=/cloudsql/${{ secrets.CLOUD_SQL_CONNECTION_NAME }},DB_NAME=zeitgeist,DB_USER=zeitgeist,DJANGO_SETTINGS_MODULE=config.settings.production,ALLOWED_HOSTS=localhost,CORS_ALLOWED_ORIGINS=http://localhost:3000,CSRF_TRUSTED_ORIGINS=http://localhost:3000" \
             --max-retries 1
           gcloud run jobs execute zeitgeist-db-maintenance \
             --region ${{ env.GCP_REGION }} \
@@ -135,12 +156,32 @@ jobs:
             --set-cloudsql-instances ${{ secrets.CLOUD_SQL_CONNECTION_NAME }} \
             --service-account ${{ secrets.GCP_APP_SA_EMAIL }} \
             --set-secrets "DJANGO_SECRET_KEY=django-secret-key:latest,DB_PASSWORD=db-password:latest" \
-            --set-env-vars "DB_HOST=/cloudsql/${{ secrets.CLOUD_SQL_CONNECTION_NAME }},DB_NAME=zeitgeist,DB_USER=zeitgeist,DJANGO_SETTINGS_MODULE=config.settings.production,ALLOWED_HOSTS=localhost,CORS_ALLOWED_ORIGINS=http://localhost:3000" \
+            --set-env-vars "DB_HOST=/cloudsql/${{ secrets.CLOUD_SQL_CONNECTION_NAME }},DB_NAME=zeitgeist,DB_USER=zeitgeist,DJANGO_SETTINGS_MODULE=config.settings.production,ALLOWED_HOSTS=localhost,CORS_ALLOWED_ORIGINS=http://localhost:3000,CSRF_TRUSTED_ORIGINS=http://localhost:3000" \
             --max-retries 1
           gcloud run jobs execute zeitgeist-db-maintenance \
             --region ${{ env.GCP_REGION }} \
             --project ${{ env.GCP_PROJECT_ID }} \
             --wait
+
+      # ── Deploy frontend to Cloud Run ────────────────────────────────────────
+      # The Next.js app is deployed as its own public Cloud Run service. The API
+      # URL is baked into the browser bundle at build time and also provided at
+      # runtime for server-rendered requests.
+      - name: Deploy frontend to Cloud Run
+        run: |
+          API_URL=$(gcloud run services describe zeitgeist-api \
+            --region ${{ env.GCP_REGION }} \
+            --project ${{ env.GCP_PROJECT_ID }} \
+            --format 'value(status.url)')
+
+          gcloud run deploy zeitgeist-frontend \
+            --image ${{ env.REGISTRY }}/${{ env.REPO }}/frontend:${{ github.sha }} \
+            --port 3000 \
+            --allow-unauthenticated \
+            --service-account ${{ secrets.GCP_APP_SA_EMAIL }} \
+            --set-env-vars "NEXT_PUBLIC_API_BASE_URL=$API_URL/api/v1" \
+            --region ${{ env.GCP_REGION }} \
+            --project ${{ env.GCP_PROJECT_ID }}
 
       # ── Deploy API to Cloud Run ─────────────────────────────────────────────
       # --port 8000 tells Cloud Run our app listens on port 8000 not the default
@@ -156,12 +197,17 @@ jobs:
             --project ${{ env.GCP_PROJECT_ID }} \
             --format 'value(status.url)')
           API_HOST=${API_URL#https://}
+          FRONTEND_URL=$(gcloud run services describe zeitgeist-frontend \
+            --region ${{ env.GCP_REGION }} \
+            --project ${{ env.GCP_PROJECT_ID }} \
+            --format 'value(status.url)')
+          TRUSTED_ORIGINS="http://localhost:3000,$FRONTEND_URL"
 
           gcloud run services update zeitgeist-api \
             --image ${{ env.REGISTRY }}/${{ env.REPO }}/api:${{ github.sha }} \
             --port 8000 \
             --set-secrets "DJANGO_SECRET_KEY=django-secret-key:latest,DB_PASSWORD=db-password:latest,GOOGLE_CLIENT_ID=google-client-id:latest,GOOGLE_CLIENT_SECRET=google-client-secret:latest" \
-            --set-env-vars "DB_HOST=/cloudsql/${{ secrets.CLOUD_SQL_CONNECTION_NAME }},DB_NAME=zeitgeist,DB_USER=zeitgeist,DJANGO_SETTINGS_MODULE=config.settings.production,ALLOWED_HOSTS=$API_HOST,CORS_ALLOWED_ORIGINS=http://localhost:3000" \
+            --set-env-vars "^|^DB_HOST=/cloudsql/${{ secrets.CLOUD_SQL_CONNECTION_NAME }}|DB_NAME=zeitgeist|DB_USER=zeitgeist|DJANGO_SETTINGS_MODULE=config.settings.production|ALLOWED_HOSTS=$API_HOST|CORS_ALLOWED_ORIGINS=$TRUSTED_ORIGINS|CSRF_TRUSTED_ORIGINS=$TRUSTED_ORIGINS" \
             --region ${{ env.GCP_REGION }} \
             --project ${{ env.GCP_PROJECT_ID }}
 
@@ -180,11 +226,22 @@ jobs:
             --region ${{ env.GCP_REGION }} \
             --project ${{ env.GCP_PROJECT_ID }} \
             --format 'value(status.url)')
+          FRONTEND_URL=$(gcloud run services describe zeitgeist-frontend \
+            --region ${{ env.GCP_REGION }} \
+            --project ${{ env.GCP_PROJECT_ID }} \
+            --format 'value(status.url)')
           echo "Deployed to: $API_URL"
           STATUS=$(curl --silent --output /dev/null --write-out "%{http_code}" "$API_URL/api/v1/health/")
           echo "Health check HTTP status: $STATUS"
           if [ "$STATUS" != "200" ]; then
             echo "ERROR: Health check failed — Cloud Run serving previous revision"
+            exit 1
+          fi
+          echo "Frontend deployed to: $FRONTEND_URL"
+          FRONTEND_STATUS=$(curl --silent --output /dev/null --write-out "%{http_code}" "$FRONTEND_URL")
+          echo "Frontend HTTP status: $FRONTEND_STATUS"
+          if [ "$FRONTEND_STATUS" != "200" ]; then
+            echo "ERROR: Frontend smoke test failed"
             exit 1
           fi
           echo "SUCCESS: Deployment complete and healthy"

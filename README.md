@@ -9,9 +9,9 @@ Google Gemini to summarise what is trending and why.
 
 ## Current status
 
-**Phase:** 1 — Foundation
-**Status:** Complete under revised local-first scope
-**Last updated:** 2026-07-04
+**Phase:** 2 — Public demo and source coverage
+**Status:** Frontend Cloud Run deployment wiring in progress
+**Last updated:** 2026-07-07
 
 ### Week 1 checklist
 
@@ -32,20 +32,24 @@ Google Gemini to summarise what is trending and why.
 
 ### Current focus
 
-Phase 1 is complete as a working end-to-end slice:
+Phase 1 is complete as a working end-to-end slice. Phase 2 is focused on making
+the app useful as a public demo while keeping source additions evidence-based.
 
 - Django backend deploys to Cloud Run and responds successfully at
   `https://zeitgeist-api-opowb5bpna-uc.a.run.app/api/v1/health/`.
-- Hacker News ingestion works end to end: external API → adapter →
-  orchestrator → Postgres snapshots/items → dashboard API → Next.js UI.
+- Hacker News, DEV, NYT Most Popular, and RAWG ingestion are implemented as
+  verified sources for Tech, News, and Gaming.
 - Production Cloud SQL has been verified with seeded categories, ingestion runs,
   snapshots, and trend items.
-- Next.js local dashboard renders real trend data from the Django API.
+- Next.js dashboard and category detail pages render stored trend data from the
+  Django API.
 - Simple Django session auth is implemented locally with email/password signup,
   login, logout, CSRF protection, and saved category preferences.
 - Anonymous users can view the dashboard and choose preferences locally.
 - Logged-in users can save preferences to the database and restore them across
   refreshes/devices.
+- GitHub Actions CD builds and deploys the API, ingestion job, and frontend
+  container images to Cloud Run.
 
 Phase 1 scope adjustment: the original design docs called for Google OAuth +
 JWT in Phase 1. For current development, auth was intentionally simplified to
@@ -54,14 +58,13 @@ be tested before adding Google OAuth, JWT, and production email verification.
 
 Immediate next steps:
 
-1. Commit and push the current session-auth/frontend changes.
-2. Confirm CI passes.
-3. Confirm CD still deploys the backend and health smoke test returns 200.
-4. Keep frontend auth testing local for now. Cloud session auth should be enabled
-   after the frontend has a deployed origin or after production cookie/CORS/CSRF
-   settings are deliberately configured.
-5. Live-verify the next public API source before adding adapter/schema/secrets or
-   CD wiring. Suggested next source: arXiv or NASA.
+1. Push the frontend deployment workflow changes to `main`.
+2. Confirm CD builds and deploys `zeitgeist-frontend`.
+3. Confirm CD updates API `CORS_ALLOWED_ORIGINS` and `CSRF_TRUSTED_ORIGINS` with
+   the deployed frontend URL.
+4. Open the public frontend URL and verify dashboard, category pages, signup,
+   login, logout, and preference save/restore.
+5. Verify cloud ingestion has current data for Tech, News, and Gaming.
 
 Reddit is deferred. As of 2026, Reddit API access for personal scripts is gated
 by approval and is not reliable enough for Week 1/2 development. Do not add
@@ -239,16 +242,17 @@ zeitgeist-db-maintenance
 | FR-13 | Graceful source failure with stale indicator | ✅ Initial support — API returns fresh/stale/missing status |
 | FR-19 | Django admin — ingestion run log | ✅ Done — models registered and ingestion runs visible |
 
-### Phase 2 — Intelligence (not started)
+### Phase 2 — Public demo and intelligence
 
 | ID | Requirement | Status |
 |---|---|---|
 | FR-03 | Inline category preference editing from dashboard | ⬜ Not started |
 | FR-07 | Time window filter (today / 7d / 30d / 90d) | ⬜ Not started |
 | FR-08 | Trend charts per category | ⬜ Not started |
-| FR-09 | Source platform filter | ⬜ Not started |
+| FR-09 | Source platform filter | ✅ Initial category-page source buttons |
 | FR-14 | Gemini AI trend summary per category | ⬜ Not started |
 | FR-20 | Admin-configurable categories and source mappings | ⬜ Not started |
+| DEP-01 | Public frontend deployment | 🚧 CD wiring in progress — Cloud Run service `zeitgeist-frontend` |
 
 ### Phase 3 — Polish & Ship (not started)
 
@@ -270,14 +274,14 @@ Revised local-first Phase 1 gate:
 - [x] Dashboard loads with real data from localhost.
 - [x] User can create an account, sign in, save preferences, refresh, and restore
   saved preferences locally.
-- [ ] After commit/push, CI and CD must pass with the new backend code.
+- [x] After commit/push, CI and CD must pass with the new backend code.
 
 Deferred from original Phase 1 gate:
 
 - Google OAuth + JWT is replaced for now by Django session auth.
 - Email verification is not implemented yet.
-- Production/cloud frontend auth is deferred until the frontend has a deployed
-  origin or production cross-origin cookie settings are explicitly configured.
+- Production/cloud frontend auth is moving into Phase 2 with a Cloud Run
+  frontend origin and explicit production cross-origin cookie/CSRF settings.
 
 ---
 
@@ -437,7 +441,7 @@ gcloud scheduler jobs resume zeitgeist-daily-ingest --location us-central1 --pro
 | Cloud Run Job | 1 | Placeholder during Terraform bootstrap; ingestion image + secrets attached by CD |
 | Cloud Scheduler | 1 | Fires ingestion at 03:00 UTC daily |
 | Memorystore (Redis) | 2 | Added in Phase 2 |
-| Cloud Run Frontend | 3 | Next.js deploy deferred; local frontend is Phase 1/2 |
+| Cloud Run Frontend | 2 | Next.js image deployed by CD as `zeitgeist-frontend` |
 | Cloud Load Balancer | 3 | HTTPS + custom domain |
 | Cloud Monitoring | 3 | Alerts before public launch |
 

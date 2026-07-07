@@ -10,8 +10,9 @@ Purpose : Production-only Django settings used when running on GCP Cloud Run.
           - DEBUG=False (never show stack traces to users)
           - Strict security headers (HSTS, secure cookies, SSL redirect)
           - JSON structured logging (Cloud Logging can parse and index these)
-          - ALLOWED_HOSTS and CORS_ALLOWED_ORIGINS set from environment variables
-            so the same Docker image works for staging and production
+          - ALLOWED_HOSTS, CORS_ALLOWED_ORIGINS, and CSRF_TRUSTED_ORIGINS set
+            from environment variables so the same Docker image works for
+            staging and production
 
 Used by : config/wsgi.py       — gunicorn loads this at API server startup
           run_job.py           — ingestion job loads this at startup
@@ -34,6 +35,7 @@ ALLOWED_HOSTS = list(filter(None, os.environ.get("ALLOWED_HOSTS", "").split(",")
 
 CORS_ALLOWED_ORIGINS = list(filter(None, os.environ.get("CORS_ALLOWED_ORIGINS", "").split(",")))
 CORS_ALLOW_CREDENTIALS = True
+CSRF_TRUSTED_ORIGINS = list(filter(None, os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(",")))
 
 # ── Security headers ──────────────────────────────────────────────────────────
 SECURE_SSL_REDIRECT = True
@@ -42,7 +44,9 @@ SECURE_SSL_REDIRECT = True
 # and does not redirect an already-secure request during smoke tests.
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SESSION_COOKIE_SECURE = True
+SESSION_COOKIE_SAMESITE = "None"
 CSRF_COOKIE_SECURE = True
+CSRF_COOKIE_SAMESITE = "None"
 SECURE_HSTS_SECONDS = 31536000
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 

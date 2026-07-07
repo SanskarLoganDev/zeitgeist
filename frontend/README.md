@@ -58,6 +58,24 @@ Run locally:
 docker run --rm -p 3000:3000 zeitgeist-frontend
 ```
 
+## Cloud deployment
+
+The GitHub Actions CD workflow builds and deploys this image to a public Cloud
+Run service named:
+
+```text
+zeitgeist-frontend
+```
+
+On each push to `main`, CD:
+
+1. Reads the current `zeitgeist-api` Cloud Run URL.
+2. Builds the frontend image with `NEXT_PUBLIC_API_BASE_URL=<api-url>/api/v1`.
+3. Deploys `zeitgeist-frontend`.
+4. Updates the API service so Django trusts the deployed frontend origin for
+   CORS and CSRF.
+5. Smoke-tests both the API health endpoint and the frontend root URL.
+
 ## Current scope
 
 - Dashboard page with real Tech, Gaming, and News data from the backend.
