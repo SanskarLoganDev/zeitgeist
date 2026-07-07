@@ -20,6 +20,8 @@ locals {
     # ── Phase 2 ──────────────────────────────────────────────────────────────
     "youtube-api-key" = "YouTube Data API v3 key"
     "tmdb-api-key"    = "TMDB API key"
+    "nytimes-api-key" = "New York Times Most Popular API key"
+    "rawg-api-key"    = "RAWG video games API key"
     "nasa-api-key"    = "NASA Open APIs key"
     "pubmed-api-key"  = "NCBI E-utilities API key"
 
