@@ -45,13 +45,18 @@ export function DashboardClient({ dashboard }: DashboardClientProps) {
   const [canSavePreferences, setCanSavePreferences] = useState(false);
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
   const [saveState, setSaveState] = useState<SaveState>("idle");
-  const [selectedSlugs, setSelectedSlugs] = useState<string[]>(() => {
-    if (typeof window === "undefined") {
-      return allCategorySlugs;
+  const [selectedSlugs, setSelectedSlugs] = useState<string[]>(allCategorySlugs);
+
+  useEffect(() => {
+    const localPreferences = readLocalPreferences();
+    if (localPreferences === null) {
+      return;
     }
 
-    return readLocalPreferences() ?? allCategorySlugs;
-  });
+    window.setTimeout(() => {
+      setSelectedSlugs(localPreferences);
+    }, 0);
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
