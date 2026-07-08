@@ -17,6 +17,7 @@ export type TrendItem = {
   external_url: string | null;
   score: number;
   score_label: string;
+  metadata: Record<string, unknown>;
   ai_summary: string | null;
   sentiment: string | null;
 };

@@ -21,6 +21,7 @@ class TrendItemSerializer(serializers.ModelSerializer[TrendItem]):
             "external_url",
             "score",
             "score_label",
+            "metadata",
             "ai_summary",
             "sentiment",
         ]

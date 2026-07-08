@@ -136,7 +136,7 @@ export function DashboardClient({ dashboard }: DashboardClientProps) {
       <div className="content">
         <header className="page-header">
           <div>
-            <p className="eyebrow">Phase 1 dashboard</p>
+            <p className="eyebrow">dashboard</p>
             <h1>Today&apos;s verified trends</h1>
             <p className="lede">
               Real trend data fetched by the ingestion job, stored in Postgres, and served through

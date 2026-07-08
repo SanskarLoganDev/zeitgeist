@@ -2,6 +2,7 @@ import type { FreshnessStatus } from "../types";
 
 const SOURCE_LABELS: Record<string, string> = {
   devto: "DEV",
+  football_data: "Football-Data",
   hackernews: "Hacker News",
   nytimes: "New York Times",
   rawg: "RAWG"
@@ -9,6 +10,7 @@ const SOURCE_LABELS: Record<string, string> = {
 
 const SOURCE_SHORT_LABELS: Record<string, string> = {
   devto: "DEV",
+  football_data: "Football",
   hackernews: "HN",
   nytimes: "NYT",
   rawg: "RAWG"

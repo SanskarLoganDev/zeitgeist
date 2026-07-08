@@ -37,8 +37,8 @@ the app useful as a public demo while keeping source additions evidence-based.
 
 - Django backend deploys to Cloud Run and responds successfully at
   `https://zeitgeist-api-opowb5bpna-uc.a.run.app/api/v1/health/`.
-- Hacker News, DEV, NYT Most Popular, and RAWG ingestion are implemented as
-  verified sources for Tech, News, and Gaming.
+- Hacker News, DEV, NYT Most Popular, RAWG, and Football-Data ingestion are
+  implemented as verified sources for Tech, News, Gaming, and Sports.
 - Production Cloud SQL has been verified with seeded categories, ingestion runs,
   snapshots, and trend items.
 - Next.js dashboard and category detail pages render stored trend data from the
@@ -64,7 +64,7 @@ Immediate next steps:
    the deployed frontend URL.
 4. Open the public frontend URL and verify dashboard, category pages, signup,
    login, logout, and preference save/restore.
-5. Verify cloud ingestion has current data for Tech, News, and Gaming.
+5. Verify cloud ingestion has current data for Tech, News, Gaming, and Sports.
 
 Reddit is deferred. As of 2026, Reddit API access for personal scripts is gated
 by approval and is not reliable enough for Week 1/2 development. Do not add

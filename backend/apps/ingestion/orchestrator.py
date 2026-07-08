@@ -45,6 +45,7 @@ from django.utils import timezone
 from apps.categories.models import Category
 from apps.ingestion.adapters.base import BaseSourceAdapter, NormalizedTrendItem
 from apps.ingestion.adapters.devto import DevToAdapter
+from apps.ingestion.adapters.football_data import FootballDataAdapter
 from apps.ingestion.adapters.hackernews import HackerNewsAdapter
 from apps.ingestion.adapters.nytimes import NYTimesMostPopularAdapter
 from apps.ingestion.adapters.rawg import RawgAdapter
@@ -58,6 +59,7 @@ AdapterRegistry: TypeAlias = Mapping[str, type[SourceAdapter]]  # noqa: UP040
 
 ADAPTER_REGISTRY: AdapterRegistry = {
     DevToAdapter.get_source_name(): DevToAdapter,
+    FootballDataAdapter.get_source_name(): FootballDataAdapter,
     HackerNewsAdapter.get_source_name(): HackerNewsAdapter,
     NYTimesMostPopularAdapter.get_source_name(): NYTimesMostPopularAdapter,
     RawgAdapter.get_source_name(): RawgAdapter,
@@ -167,6 +169,7 @@ def _write_trend_snapshot(
                 external_url=item.external_url,
                 score=item.score,
                 score_label=item.score_label,
+                metadata=item.metadata,
                 rank=item.rank,
             )
             for item in normalized_items

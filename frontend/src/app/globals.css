@@ -438,6 +438,80 @@ h1 {
   white-space: nowrap;
 }
 
+.football-card {
+  background: #1f2328;
+  border-radius: 8px;
+  color: #f8fafc;
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+}
+
+.football-card-topline {
+  align-items: center;
+  color: #c8d0dc;
+  display: flex;
+  font-size: 13px;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.football-card-topline strong {
+  color: #ffffff;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.football-card-scoreboard {
+  align-items: center;
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+}
+
+.football-team {
+  min-width: 0;
+}
+
+.football-team-away {
+  text-align: right;
+}
+
+.football-team-name {
+  display: block;
+  font-size: 16px;
+  font-weight: 750;
+  overflow-wrap: anywhere;
+}
+
+.football-score {
+  align-items: center;
+  display: grid;
+  gap: 18px;
+  grid-template-columns: 44px 12px 44px;
+  justify-items: center;
+  line-height: 1;
+}
+
+.football-score span {
+  font-size: 34px;
+  font-weight: 650;
+}
+
+.football-score span:nth-child(2) {
+  color: #aeb8c6;
+}
+
+.football-card-footer {
+  align-items: center;
+  color: #aeb8c6;
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 13px;
+  gap: 10px;
+  justify-content: center;
+}
+
 .empty-state {
   border: 1px dashed var(--line);
   border-radius: 8px;
@@ -559,5 +633,18 @@ h1 {
 
   .score {
     grid-column: 2;
+  }
+
+  .football-card-scoreboard {
+    gap: 10px;
+  }
+
+  .football-score {
+    gap: 8px;
+    grid-template-columns: 34px 10px 34px;
+  }
+
+  .football-score span {
+    font-size: 26px;
   }
 }

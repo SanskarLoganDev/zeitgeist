@@ -43,6 +43,12 @@ STARTER_CATEGORIES: list[StarterCategory] = [
         "icon": "news",
         "sources": [CategorySourceConfig.SOURCE_NYTIMES],
     },
+    {
+        "name": "Sports",
+        "slug": "sports",
+        "icon": "sports",
+        "sources": [CategorySourceConfig.SOURCE_FOOTBALL_DATA],
+    },
 ]
 
 

@@ -85,6 +85,7 @@ class TrendItem(models.Model):
       DEV       → reactions + comments, score_label="engagement"
       NYTimes   → rank-derived score,  score_label="most viewed"
       RAWG      → user library adds,   score_label="adds"
+      Football  → match timestamp,     score_label="Full-time - 3-2"
       YouTube   → view count,          score_label="views"
       arXiv     → rank,                score_label="recent submissions"
       PubMed    → citations,           score_label="citations"
@@ -99,6 +100,7 @@ class TrendItem(models.Model):
     SOURCE_DEVTO = "devto"
     SOURCE_NYTIMES = "nytimes"
     SOURCE_RAWG = "rawg"
+    SOURCE_FOOTBALL_DATA = "football_data"
     SOURCE_YOUTUBE = "youtube"
     SOURCE_ARXIV = "arxiv"
     SOURCE_PUBMED = "pubmed"
@@ -110,6 +112,7 @@ class TrendItem(models.Model):
         (SOURCE_DEVTO, "DEV"),
         (SOURCE_NYTIMES, "New York Times"),
         (SOURCE_RAWG, "RAWG"),
+        (SOURCE_FOOTBALL_DATA, "Football-Data"),
         (SOURCE_YOUTUBE, "YouTube"),
         (SOURCE_ARXIV, "arXiv"),
         (SOURCE_PUBMED, "PubMed"),
@@ -146,6 +149,11 @@ class TrendItem(models.Model):
     score = models.BigIntegerField(default=0)
     # Human-readable label for the score — shown in the UI on trend cards
     score_label = models.CharField(max_length=50, default="score")
+    metadata = models.JSONField(
+        blank=True,
+        default=dict,
+        help_text="Optional source-specific display fields, e.g. football match details.",
+    )
 
     # Rank within this snapshot — 1 = most trending
     rank = models.PositiveSmallIntegerField(default=1)

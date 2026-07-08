@@ -93,6 +93,7 @@ class CategorySourceConfig(models.Model):
     SOURCE_DEVTO = "devto"
     SOURCE_NYTIMES = "nytimes"
     SOURCE_RAWG = "rawg"
+    SOURCE_FOOTBALL_DATA = "football_data"
     SOURCE_YOUTUBE = "youtube"        # Phase 2
     SOURCE_ARXIV = "arxiv"            # Phase 2
     SOURCE_PUBMED = "pubmed"          # Phase 2
@@ -104,6 +105,7 @@ class CategorySourceConfig(models.Model):
         (SOURCE_DEVTO, "DEV"),
         (SOURCE_NYTIMES, "New York Times"),
         (SOURCE_RAWG, "RAWG"),
+        (SOURCE_FOOTBALL_DATA, "Football-Data"),
         (SOURCE_YOUTUBE, "YouTube"),
         (SOURCE_ARXIV, "arXiv"),
         (SOURCE_PUBMED, "PubMed"),

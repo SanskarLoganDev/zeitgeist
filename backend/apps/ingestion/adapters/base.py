@@ -38,7 +38,7 @@ Phase    : 1 — Week 2
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Generic, TypeVar
 
 from apps.categories.models import Category
@@ -61,6 +61,7 @@ class NormalizedTrendItem:
     score_label: str
     rank: int
     external_url: str | None = None
+    metadata: dict[str, object] = field(default_factory=dict)
 
 
 class BaseSourceAdapter(ABC, Generic[RawItem]):
