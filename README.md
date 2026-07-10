@@ -1,8 +1,8 @@
 # Zeitgeist
 
 A personalised social media and internet trend aggregation platform. Collects
-trending content daily from verified public APIs such as Hacker News, YouTube,
-arXiv, PubMed, TMDB, and NASA — normalises it into a unified dashboard, and uses
+trending content daily from verified public APIs such as Hacker News, DEV,
+football-data, RAWG, New York Times, and NASA — normalises it into a unified dashboard, and uses
 Google Gemini to summarise what is trending and why.
 
 ---
