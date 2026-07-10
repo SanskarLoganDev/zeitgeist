@@ -43,6 +43,7 @@ module "cloud_run" {
   project_id            = var.gcp_project_id
   region                = var.gcp_region
   api_image             = "${var.gcp_region}-docker.pkg.dev/${var.gcp_project_id}/zeitgeist/api:latest"
+  frontend_image        = "${var.gcp_region}-docker.pkg.dev/${var.gcp_project_id}/zeitgeist/frontend:latest"
   job_image             = "${var.gcp_region}-docker.pkg.dev/${var.gcp_project_id}/zeitgeist/job:latest"
   db_connection         = module.cloud_sql.connection_name
   use_placeholder_image = var.use_placeholder_image

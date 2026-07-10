@@ -418,6 +418,28 @@ cd E:\Coding-practice\Projects\zeitgeist
 git push origin main                   ← step 5: deploy Django image + attach secrets via CD
 ```
 
+### Import CD-created Cloud Run resources into Terraform state
+
+If a resource was first created by CD with `gcloud run deploy` and is later added
+to Terraform, import the existing cloud resource into Terraform state before
+running `terraform plan` or `terraform apply`. This prevents Terraform from
+trying to create a duplicate resource with the same name.
+
+For the frontend Cloud Run service:
+
+```cmd
+cd E:\Coding-practice\Projects\zeitgeist\infra
+terraform import module.cloud_run.google_cloud_run_v2_service.frontend projects/zeitgeist-499322/locations/us-central1/services/zeitgeist-frontend
+terraform state list
+terraform plan
+```
+
+You should see:
+
+```text
+module.cloud_run.google_cloud_run_v2_service.frontend
+```
+
 ### Cost management
 
 ```cmd
@@ -513,3 +535,9 @@ zeitgeist/
 | Linting | ruff |
 | Type checking | mypy (strict) |
 | Testing | pytest + pytest-django |
+
+### Trigger the job in cloud
+
+```cmd
+gcloud run jobs execute zeitgeist-ingest --region us-central1 --project zeitgeist-499322
+```

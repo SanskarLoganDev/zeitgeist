@@ -6,9 +6,10 @@ locals {
   # On first apply, real images don't exist yet — use Google's public hello-world.
   # CD owns the live image and secret env vars after bootstrap, so Terraform
   # ignores those fields below instead of rolling them back on later applies.
-  placeholder = "us-docker.pkg.dev/cloudrun/container/hello:latest"
-  api_image   = var.use_placeholder_image ? local.placeholder : var.api_image
-  job_image   = var.use_placeholder_image ? local.placeholder : var.job_image
+  placeholder    = "us-docker.pkg.dev/cloudrun/container/hello:latest"
+  api_image      = var.use_placeholder_image ? local.placeholder : var.api_image
+  frontend_image = var.use_placeholder_image ? local.placeholder : var.frontend_image
+  job_image      = var.use_placeholder_image ? local.placeholder : var.job_image
 }
 
 data "google_project" "current" {
@@ -146,7 +147,7 @@ resource "google_cloud_run_v2_service" "api" {
       # During development this is critical — min=1 costs ~$1.40/day constantly.
       # Set to 1 only when actively testing or before public launch.
       # Switch back to 0 after each development session to save money.
-      min_instance_count = 0
+      min_instance_count = 1
       max_instance_count = 10
     }
 
@@ -250,6 +251,77 @@ resource "google_cloud_run_v2_service_iam_member" "api_public" {
   member   = "allUsers"
 }
 
+# ── Frontend Cloud Run Service ────────────────────────────────────────────────
+resource "google_cloud_run_v2_service" "frontend" {
+  project             = var.project_id
+  name                = "zeitgeist-frontend"
+  location            = var.region
+  deletion_protection = true
+
+  depends_on = [null_resource.iam_propagation_delay]
+
+  lifecycle {
+    # CD deploys the real Next.js image and runtime API URL. Terraform owns the
+    # stable service shape and warm instance setting.
+    ignore_changes = [
+      client,
+      client_version,
+      template[0].containers[0].image,
+      template[0].containers[0].env,
+      template[0].containers[0].ports,
+      template[0].containers[0].startup_probe,
+    ]
+  }
+
+  scaling {
+    min_instance_count = 1
+  }
+
+  template {
+    service_account = google_service_account.app.email
+
+    scaling {
+      # Keep one warm frontend instance to avoid first-visit Cloud Run cold starts.
+      min_instance_count = 1
+      max_instance_count = 12
+    }
+
+    containers {
+      # Bootstrap image only. CD replaces this with the real Next.js image.
+      image = local.frontend_image
+
+      # The placeholder listens on 8080. CD deploys the real frontend on 3000.
+      # Port drift is ignored above so Terraform does not undo CD's runtime port.
+      ports {
+        container_port = 8080
+      }
+
+      resources {
+        cpu_idle          = true
+        startup_cpu_boost = true
+
+        limits = {
+          cpu    = "1000m"
+          memory = "512Mi"
+        }
+      }
+    }
+  }
+
+  traffic {
+    type    = "TRAFFIC_TARGET_ALLOCATION_TYPE_LATEST"
+    percent = 100
+  }
+}
+
+resource "google_cloud_run_v2_service_iam_member" "frontend_public" {
+  project  = var.project_id
+  location = var.region
+  name     = google_cloud_run_v2_service.frontend.name
+  role     = "roles/run.invoker"
+  member   = "allUsers"
+}
+
 # ── Ingestion Cloud Run Job ───────────────────────────────────────────────────
 # This is NOT a service — it doesn't run continuously.
 # Cloud Scheduler triggers it once per day at 03:00 UTC.
@@ -331,6 +403,11 @@ resource "google_cloud_run_v2_job" "ingest" {
 output "api_url" {
   value       = google_cloud_run_v2_service.api.uri
   description = "Cloud Run service URL — use as ALLOWED_HOSTS in terraform.tfvars after first apply"
+}
+
+output "frontend_url" {
+  value       = google_cloud_run_v2_service.frontend.uri
+  description = "Cloud Run frontend service URL"
 }
 
 output "ingestion_job_name" {

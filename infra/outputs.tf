@@ -3,6 +3,11 @@ output "api_url" {
   value       = module.cloud_run.api_url
 }
 
+output "frontend_url" {
+  description = "Cloud Run frontend service URL"
+  value       = module.cloud_run.frontend_url
+}
+
 output "artifact_registry_url" {
   description = "Docker registry URL — used in GitHub Actions push step"
   value       = module.artifact_registry.registry_url
