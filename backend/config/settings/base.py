@@ -159,6 +159,32 @@ STATIC_ROOT = BASE_DIR / "staticfiles"  # collectstatic target for Django admin 
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+# ── Email / SMTP ──────────────────────────────────────────────────────────────
+# Used for account verification OTPs. Locally these values come from .env.
+# In production they should be injected as Cloud Run environment variables or
+# Secret Manager references owned by CD, not committed to source control.
+EMAIL_BACKEND = os.environ.get(
+    "EMAIL_BACKEND",
+    "django.core.mail.backends.smtp.EmailBackend",
+)
+EMAIL_HOST = os.environ.get("EMAIL_HOST", "")
+EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587"))
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "true").lower() == "true"
+EMAIL_USE_SSL = os.environ.get("EMAIL_USE_SSL", "false").lower() == "true"
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER)
+
+EMAIL_VERIFICATION_OTP_TTL_MINUTES = int(
+    os.environ.get("EMAIL_VERIFICATION_OTP_TTL_MINUTES", "10")
+)
+EMAIL_VERIFICATION_MAX_ATTEMPTS = int(
+    os.environ.get("EMAIL_VERIFICATION_MAX_ATTEMPTS", "5")
+)
+EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS = int(
+    os.environ.get("EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS", "60")
+)
+
 # ── AI summaries ──────────────────────────────────────────────────────────────
 # The ingestion job uses these to generate stored category summaries through
 # Vertex AI / Gemini. User-facing API requests never call Gemini directly.

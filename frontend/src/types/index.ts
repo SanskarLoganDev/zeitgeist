@@ -86,6 +86,23 @@ export type AuthState = {
   user: User | null;
 };
 
+export type VerificationRequiredState = {
+  authenticated: false;
+  user: null;
+  verification_required: true;
+  email: string;
+  resend_cooldown_seconds: number;
+  detail: string;
+};
+
+export type RegisterResponse = AuthState | VerificationRequiredState;
+
+export type AuthConfig = {
+  email_verification: {
+    resend_cooldown_seconds: number;
+  };
+};
+
 export type CategoryPreferenceState = {
   can_save: boolean;
   selected_slugs: string[];

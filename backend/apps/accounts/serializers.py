@@ -44,3 +44,23 @@ class LoginSerializer(serializers.Serializer[Any]):
 
     def validate_email(self, value: str) -> str:
         return value.strip().lower()
+
+
+class VerifyEmailSerializer(serializers.Serializer[Any]):
+    email = serializers.EmailField()
+    code = serializers.CharField(min_length=6, max_length=6, trim_whitespace=True)
+
+    def validate_email(self, value: str) -> str:
+        return value.strip().lower()
+
+    def validate_code(self, value: str) -> str:
+        if not value.isdigit():
+            raise serializers.ValidationError("Enter the 6-digit verification code.")
+        return value
+
+
+class ResendVerificationSerializer(serializers.Serializer[Any]):
+    email = serializers.EmailField()
+
+    def validate_email(self, value: str) -> str:
+        return value.strip().lower()

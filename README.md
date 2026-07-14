@@ -214,10 +214,6 @@ Delete old migration jobs:
 
 ```cmd
 gcloud run jobs delete zeitgeist-migrate-15 --region us-central1 --project zeitgeist-499322 --quiet
-gcloud run jobs delete zeitgeist-migrate-16 --region us-central1 --project zeitgeist-499322 --quiet
-gcloud run jobs delete zeitgeist-migrate-17 --region us-central1 --project zeitgeist-499322 --quiet
-gcloud run jobs delete zeitgeist-migrate-18 --region us-central1 --project zeitgeist-499322 --quiet
-gcloud run jobs delete zeitgeist-migrate-20 --region us-central1 --project zeitgeist-499322 --quiet
 ```
 
 Do not delete:
@@ -320,6 +316,19 @@ copy .env.example .env
 # Edit .env — fill in DJANGO_SECRET_KEY and DB credentials
 ```
 
+For registration email verification, configure SMTP in `backend\.env`:
+
+```text
+EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
+EMAIL_HOST=smtp.example.com
+EMAIL_PORT=587
+EMAIL_HOST_USER=your-email@example.com
+EMAIL_HOST_PASSWORD=replace-me
+EMAIL_USE_TLS=true
+EMAIL_USE_SSL=false
+DEFAULT_FROM_EMAIL=Zeitgeist <your-email@example.com>
+```
+
 ### 4. Run migrations and start the server
 
 ```cmd
@@ -330,6 +339,12 @@ python manage.py runserver localhost:8000
 API: `http://localhost:8000`
 Health check: `http://localhost:8000/api/v1/health/`
 Admin: `http://localhost:8000/admin/`
+
+For the Frontend run the following commands:
+```cmd
+npm run build
+npm run dev
+```
 
 ### 5. Seed categories and run local ingestion
 
@@ -400,9 +415,11 @@ NEXT_PUBLIC_API_BASE_URL=http://localhost:8000/api/v1
 1. Open `http://localhost:3000`.
 2. Click `Create account`.
 3. Create an email/password account.
-4. Select category preferences and save.
-5. Refresh the page and confirm preferences restore.
-6. Sign out and sign back in.
+4. Check your email for the 6-digit verification code.
+5. Enter the code on `/verify-email`.
+6. Select category preferences and save.
+7. Refresh the page and confirm preferences restore.
+8. Sign out and sign back in.
 
 ---
 

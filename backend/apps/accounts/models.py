@@ -29,6 +29,7 @@ Phase    : 1 — Week 1 (stub, enough for migrations and CI to pass)
            Phase 1 — Week 3 (full implementation: google_id, avatar_url, preferences)
 """
 from django.contrib.auth.models import AbstractUser
+from django.db import models
 
 
 class User(AbstractUser):
@@ -66,3 +67,39 @@ class User(AbstractUser):
 
     def __str__(self) -> str:
         return self.email or self.username
+
+    @property
+    def is_email_verified(self) -> bool:
+        return self.email_verified_at is not None
+
+    email_verified_at = models.DateTimeField(null=True, blank=True)
+
+
+class EmailVerificationOTP(models.Model):
+    """One-time email verification code for a user registration."""
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="email_verification_otps",
+    )
+    code_hash = models.CharField(max_length=128)
+    sent_to_email = models.EmailField()
+    attempts = models.PositiveSmallIntegerField(default=0)
+    expires_at = models.DateTimeField()
+    consumed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    sent_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "accounts_email_verification_otp"
+        verbose_name = "email verification OTP"
+        verbose_name_plural = "email verification OTPs"
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["user", "-created_at"]),
+            models.Index(fields=["sent_to_email", "-created_at"]),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.sent_to_email} @ {self.created_at:%Y-%m-%d %H:%M}"

@@ -27,7 +27,15 @@ export function LoginForm({ mode }: LoginFormProps) {
 
     try {
       if (mode === "register") {
-        await register({ email, password });
+        const response = await register({ email, password });
+        if ("verification_required" in response && response.verification_required) {
+          const params = new URLSearchParams({
+            email: response.email,
+            resendCooldown: String(response.resend_cooldown_seconds)
+          });
+          router.push(`/verify-email?${params.toString()}`);
+          return;
+        }
       } else {
         await login({ email, password });
       }

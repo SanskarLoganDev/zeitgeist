@@ -10,9 +10,11 @@ Purpose : URL routes for the accounts app. Mounted at /api/v1/auth/ by config/ur
           Routes:
             GET  /api/v1/auth/csrf/      → CSRFTokenView    (returns CSRF cookie + token)
             POST /api/v1/auth/register/  → RegisterView     (email + password signup)
-            POST /api/v1/auth/login/     → LoginView        (email + password login)
-            POST /api/v1/auth/logout/    → LogoutView       (clears Django session)
-            GET  /api/v1/auth/me/        → CurrentUserView  (session restore on page load)
+            POST /api/v1/auth/verify-email/        → VerifyEmailView
+            POST /api/v1/auth/resend-verification/ → ResendVerificationView
+            POST /api/v1/auth/login/               → LoginView
+            POST /api/v1/auth/logout/              → LogoutView
+            GET  /api/v1/auth/me/                  → CurrentUserView
 
 Used by : config/urls.py — includes this file at the /api/v1/auth/ prefix
           Next.js frontend — lib/auth.ts calls all of these endpoints
@@ -21,11 +23,27 @@ Phase    : 1 — Week 3 (complete)
 """
 from django.urls import URLPattern, URLResolver, path
 
-from apps.accounts.views import CSRFTokenView, CurrentUserView, LoginView, LogoutView, RegisterView
+from apps.accounts.views import (
+    AuthConfigView,
+    CSRFTokenView,
+    CurrentUserView,
+    LoginView,
+    LogoutView,
+    RegisterView,
+    ResendVerificationView,
+    VerifyEmailView,
+)
 
 urlpatterns: list[URLPattern | URLResolver] = [
+    path("config/", AuthConfigView.as_view(), name="auth-config"),
     path("csrf/", CSRFTokenView.as_view(), name="auth-csrf"),
     path("register/", RegisterView.as_view(), name="auth-register"),
+    path("verify-email/", VerifyEmailView.as_view(), name="auth-verify-email"),
+    path(
+        "resend-verification/",
+        ResendVerificationView.as_view(),
+        name="auth-resend-verification",
+    ),
     path("login/", LoginView.as_view(), name="auth-login"),
     path("logout/", LogoutView.as_view(), name="auth-logout"),
     path("me/", CurrentUserView.as_view(), name="auth-me"),

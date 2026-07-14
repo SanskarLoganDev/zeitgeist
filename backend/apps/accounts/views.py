@@ -7,7 +7,13 @@ Purpose : Handles simple session-based authentication for the application.
             - Sets a CSRF cookie and returns the current CSRF token
 
           POST /api/v1/auth/register/
-            - Creates an email/password account and starts a Django session
+            - Creates an email/password account and emails a verification OTP
+
+          POST /api/v1/auth/verify-email/
+            - Verifies the emailed OTP and starts a Django session
+
+          POST /api/v1/auth/resend-verification/
+            - Resends a verification OTP for an unverified account
 
           POST /api/v1/auth/login/
             - Authenticates email/password credentials and starts a Django session
@@ -26,6 +32,9 @@ Phase    : 1 — Week 3
 """
 from __future__ import annotations
 
+import logging
+
+from django.conf import settings
 from django.contrib.auth import authenticate, login, logout
 from django.http import HttpRequest
 from django.middleware.csrf import get_token
@@ -38,8 +47,22 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.accounts.email_verification import (
+    EmailVerificationError,
+    maybe_resend_registration_otp,
+    send_registration_otp,
+    verify_registration_otp,
+)
 from apps.accounts.models import User
-from apps.accounts.serializers import LoginSerializer, RegisterSerializer, UserSerializer
+from apps.accounts.serializers import (
+    LoginSerializer,
+    RegisterSerializer,
+    ResendVerificationSerializer,
+    UserSerializer,
+    VerifyEmailSerializer,
+)
+
+logger = logging.getLogger(__name__)
 
 
 def _auth_payload(request: HttpRequest | Request) -> dict[str, object]:
@@ -63,6 +86,25 @@ def _user_auth_payload(user: User) -> dict[str, object]:
     }
 
 
+def _verification_required_payload(email: str) -> dict[str, object]:
+    return {
+        "authenticated": False,
+        "user": None,
+        "verification_required": True,
+        "email": email,
+        "resend_cooldown_seconds": settings.EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS,
+        "detail": "Check your email for the verification code.",
+    }
+
+
+def _auth_config_payload() -> dict[str, object]:
+    return {
+        "email_verification": {
+            "resend_cooldown_seconds": settings.EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS,
+        }
+    }
+
+
 @method_decorator(ensure_csrf_cookie, name="dispatch")
 class CSRFTokenView(APIView):
     authentication_classes = [SessionAuthentication]
@@ -70,6 +112,14 @@ class CSRFTokenView(APIView):
 
     def get(self, request: Request) -> Response:
         return Response({"csrfToken": get_token(request)})
+
+
+class AuthConfigView(APIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [AllowAny]
+
+    def get(self, request: Request) -> Response:
+        return Response(_auth_config_payload())
 
 
 @method_decorator(csrf_protect, name="dispatch")
@@ -81,8 +131,60 @@ class RegisterView(APIView):
         serializer = RegisterSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
+        try:
+            send_registration_otp(user)
+        except Exception:
+            logger.exception("Registration verification email failed for user_id=%s", user.id)
+            user.delete()
+            return Response(
+                {"detail": "Could not send verification email. Please try again later."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+        return Response(
+            _verification_required_payload(user.email),
+            status=status.HTTP_201_CREATED,
+        )
+
+
+@method_decorator(csrf_protect, name="dispatch")
+class VerifyEmailView(APIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [AllowAny]
+
+    def post(self, request: Request) -> Response:
+        serializer = VerifyEmailSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            user = verify_registration_otp(
+                email=serializer.validated_data["email"],
+                code=serializer.validated_data["code"],
+            )
+        except EmailVerificationError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
         login(request._request, user)
-        return Response(_user_auth_payload(user), status=status.HTTP_201_CREATED)
+        return Response(_user_auth_payload(user))
+
+
+@method_decorator(csrf_protect, name="dispatch")
+class ResendVerificationView(APIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [AllowAny]
+
+    def post(self, request: Request) -> Response:
+        serializer = ResendVerificationSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            maybe_resend_registration_otp(serializer.validated_data["email"])
+        except EmailVerificationError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(
+            {
+                "detail": "If that email needs verification, a new code has been sent.",
+                "resend_cooldown_seconds": settings.EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS,
+            }
+        )
 
 
 @method_decorator(csrf_protect, name="dispatch")
@@ -100,6 +202,11 @@ class LoginView(APIView):
             return Response(
                 {"detail": "Invalid email or password."},
                 status=status.HTTP_400_BAD_REQUEST,
+            )
+        if not user.is_email_verified:
+            return Response(
+                _verification_required_payload(user.email),
+                status=status.HTTP_403_FORBIDDEN,
             )
 
         login(request._request, user)

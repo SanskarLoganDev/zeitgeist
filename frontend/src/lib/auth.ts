@@ -1,10 +1,24 @@
-import type { AuthState, CategoryPreferenceState } from "../types";
+import type { AuthConfig, AuthState, CategoryPreferenceState, RegisterResponse } from "../types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000/api/v1";
 
 type AuthInput = {
   email: string;
   password: string;
+};
+
+type VerifyEmailInput = {
+  code: string;
+  email: string;
+};
+
+type ResendVerificationInput = {
+  email: string;
+};
+
+type ResendVerificationResponse = {
+  detail: string;
+  resend_cooldown_seconds: number;
 };
 
 type CsrfResponse = {
@@ -132,12 +146,31 @@ export async function getCurrentUser(): Promise<AuthState> {
   }
 }
 
-export function register(input: AuthInput): Promise<AuthState> {
-  return postJson<AuthState>("/auth/register/", input);
+export function register(input: AuthInput): Promise<RegisterResponse> {
+  return postJson<RegisterResponse>("/auth/register/", input);
+}
+
+export async function getAuthConfig(): Promise<AuthConfig> {
+  const response = await fetch(`${API_BASE_URL}/auth/config/`, {
+    credentials: "include"
+  });
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response));
+  }
+
+  return response.json() as Promise<AuthConfig>;
 }
 
 export function login(input: AuthInput): Promise<AuthState> {
   return postJson<AuthState>("/auth/login/", input);
+}
+
+export function verifyEmail(input: VerifyEmailInput): Promise<AuthState> {
+  return postJson<AuthState>("/auth/verify-email/", input);
+}
+
+export function resendVerification(input: ResendVerificationInput): Promise<ResendVerificationResponse> {
+  return postJson<ResendVerificationResponse>("/auth/resend-verification/", input);
 }
 
 export function logout(): Promise<AuthState> {

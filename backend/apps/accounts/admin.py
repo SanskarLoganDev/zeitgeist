@@ -17,10 +17,17 @@ Phase    : 1 — Week 1
 """
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, TypeAlias
+
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 
-from .models import User
+from .models import EmailVerificationOTP, User
+
+if TYPE_CHECKING:
+    EmailVerificationOTPModelAdmin: TypeAlias = admin.ModelAdmin[EmailVerificationOTP]  # noqa: UP040
+else:
+    EmailVerificationOTPModelAdmin = admin.ModelAdmin
 
 
 @admin.register(User)
@@ -37,4 +44,30 @@ class UserAdmin(BaseUserAdmin):  # type: ignore[type-arg]
     Week 3: add extra_fields fieldset for google_id, avatar_url.
     """
 
-    pass
+    list_display = (
+        "username",
+        "email",
+        "first_name",
+        "last_name",
+        "is_staff",
+        "email_verified_at",
+    )
+    readonly_fields = ("email_verified_at",)
+
+
+@admin.register(EmailVerificationOTP)
+class EmailVerificationOTPAdmin(EmailVerificationOTPModelAdmin):
+    list_display = ("sent_to_email", "user", "attempts", "expires_at", "consumed_at", "created_at")
+    list_filter = ("consumed_at", "expires_at", "created_at")
+    search_fields = ("sent_to_email", "user__email", "user__username")
+    readonly_fields = (
+        "user",
+        "code_hash",
+        "sent_to_email",
+        "attempts",
+        "expires_at",
+        "consumed_at",
+        "created_at",
+        "sent_at",
+    )
+    ordering = ("-created_at",)
