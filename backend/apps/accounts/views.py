@@ -15,6 +15,12 @@ Purpose : Handles simple session-based authentication for the application.
           POST /api/v1/auth/resend-verification/
             - Resends a verification OTP for an unverified account
 
+          POST /api/v1/auth/request-password-reset/
+            - Emails a password reset OTP when the account exists
+
+          POST /api/v1/auth/reset-password/
+            - Verifies a password reset OTP and updates the password
+
           POST /api/v1/auth/login/
             - Authenticates email/password credentials and starts a Django session
 
@@ -50,12 +56,16 @@ from rest_framework.views import APIView
 from apps.accounts.email_verification import (
     EmailVerificationError,
     maybe_resend_registration_otp,
+    maybe_send_password_reset_otp,
+    reset_password_with_otp,
     send_registration_otp,
     verify_registration_otp,
 )
 from apps.accounts.models import User
 from apps.accounts.serializers import (
     LoginSerializer,
+    PasswordResetConfirmSerializer,
+    PasswordResetRequestSerializer,
     RegisterSerializer,
     ResendVerificationSerializer,
     UserSerializer,
@@ -185,6 +195,56 @@ class ResendVerificationView(APIView):
                 "resend_cooldown_seconds": settings.EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS,
             }
         )
+
+
+@method_decorator(csrf_protect, name="dispatch")
+class RequestPasswordResetView(APIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [AllowAny]
+
+    def post(self, request: Request) -> Response:
+        serializer = PasswordResetRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            maybe_send_password_reset_otp(serializer.validated_data["email"])
+        except EmailVerificationError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception:
+            logger.exception(
+                "Password reset email failed for email=%s",
+                serializer.validated_data["email"],
+            )
+            return Response(
+                {"detail": "Could not send password reset email. Please try again later."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        return Response(
+            {
+                "detail": "If that email is registered, a password reset code has been sent.",
+                "resend_cooldown_seconds": settings.EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS,
+            }
+        )
+
+
+@method_decorator(csrf_protect, name="dispatch")
+class ResetPasswordView(APIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [AllowAny]
+
+    def post(self, request: Request) -> Response:
+        serializer = PasswordResetConfirmSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            reset_password_with_otp(
+                email=serializer.validated_data["email"],
+                code=serializer.validated_data["code"],
+                new_password=serializer.validated_data["new_password"],
+            )
+        except EmailVerificationError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({"detail": "Your password has been updated. You can sign in now."})
 
 
 @method_decorator(csrf_protect, name="dispatch")

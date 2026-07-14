@@ -83,6 +83,12 @@ export function LoginForm({ mode }: LoginFormProps) {
             />
           </label>
 
+          {mode === "login" ? (
+            <Link className="form-text-link" href="/forgot-password">
+              Forgot password?
+            </Link>
+          ) : null}
+
           {error !== null ? <p className="error-message">{error}</p> : null}
 
           <div className="button-row">

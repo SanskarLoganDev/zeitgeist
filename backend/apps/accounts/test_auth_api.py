@@ -10,7 +10,7 @@ from django.test import Client
 from django.utils import timezone
 
 from apps.accounts.email_verification import _hash_otp
-from apps.accounts.models import EmailVerificationOTP
+from apps.accounts.models import EmailVerificationOTP, PasswordResetOTP
 
 
 def _csrf_token(client: Client) -> str:
@@ -45,6 +45,7 @@ def test_register_creates_user_and_sends_verification_code(settings: Any) -> Non
     assert len(mail.outbox) == 1
     assert mail.outbox[0].to == ["person@example.com"]
     assert "Your Zeitgeist verification code" in mail.outbox[0].subject
+    assert "This code expires in 10 minutes." in mail.outbox[0].body
 
 
 @pytest.mark.django_db
@@ -189,3 +190,92 @@ def test_logout_clears_session() -> None:
 
     assert response.status_code == 200
     assert me_response.json()["authenticated"] is False
+
+
+@pytest.mark.django_db
+def test_password_reset_request_sends_code_for_verified_user(settings: Any) -> None:
+    settings.EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
+    user_model = get_user_model()
+    user = user_model.objects.create_user(
+        username="person@example.com",
+        email="person@example.com",
+        password="old-password-123",
+        email_verified_at=timezone.now(),
+    )
+    client = Client(enforce_csrf_checks=True)
+    csrf_token = _csrf_token(client)
+
+    response = client.post(
+        "/api/v1/auth/request-password-reset/",
+        data={"email": "person@example.com"},
+        content_type="application/json",
+        HTTP_X_CSRFTOKEN=csrf_token,
+    )
+
+    assert response.status_code == 200
+    assert response.json()["resend_cooldown_seconds"] == 60
+    assert PasswordResetOTP.objects.filter(user=user).count() == 1
+    assert len(mail.outbox) == 1
+    assert mail.outbox[0].to == ["person@example.com"]
+    assert "Your Zeitgeist password reset code" in mail.outbox[0].subject
+    assert "This code expires in 10 minutes." in mail.outbox[0].body
+
+
+@pytest.mark.django_db
+def test_password_reset_request_does_not_reveal_unknown_email(settings: Any) -> None:
+    settings.EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
+    client = Client(enforce_csrf_checks=True)
+    csrf_token = _csrf_token(client)
+
+    response = client.post(
+        "/api/v1/auth/request-password-reset/",
+        data={"email": "missing@example.com"},
+        content_type="application/json",
+        HTTP_X_CSRFTOKEN=csrf_token,
+    )
+
+    assert response.status_code == 200
+    assert "password reset code has been sent" in response.json()["detail"]
+    assert PasswordResetOTP.objects.count() == 0
+    assert len(mail.outbox) == 0
+
+
+@pytest.mark.django_db
+def test_password_reset_updates_password() -> None:
+    user_model = get_user_model()
+    user = user_model.objects.create_user(
+        username="person@example.com",
+        email="person@example.com",
+        password="old-password-123",
+        email_verified_at=timezone.now(),
+    )
+    PasswordResetOTP.objects.create(
+        user=user,
+        sent_to_email=user.email,
+        code_hash=_hash_otp("654321"),
+        expires_at=timezone.now() + timedelta(minutes=10),
+    )
+    client = Client(enforce_csrf_checks=True)
+    csrf_token = _csrf_token(client)
+
+    reset_response = client.post(
+        "/api/v1/auth/reset-password/",
+        data={
+            "email": "person@example.com",
+            "code": "654321",
+            "new_password": "new-password-456",
+        },
+        content_type="application/json",
+        HTTP_X_CSRFTOKEN=csrf_token,
+    )
+    csrf_token = _csrf_token(client)
+    login_response = client.post(
+        "/api/v1/auth/login/",
+        data={"email": "person@example.com", "password": "new-password-456"},
+        content_type="application/json",
+        HTTP_X_CSRFTOKEN=csrf_token,
+    )
+
+    assert reset_response.status_code == 200
+    assert login_response.status_code == 200
+    assert login_response.json()["authenticated"] is True

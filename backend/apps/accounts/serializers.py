@@ -64,3 +64,28 @@ class ResendVerificationSerializer(serializers.Serializer[Any]):
 
     def validate_email(self, value: str) -> str:
         return value.strip().lower()
+
+
+class PasswordResetRequestSerializer(serializers.Serializer[Any]):
+    email = serializers.EmailField()
+
+    def validate_email(self, value: str) -> str:
+        return value.strip().lower()
+
+
+class PasswordResetConfirmSerializer(serializers.Serializer[Any]):
+    email = serializers.EmailField()
+    code = serializers.CharField(min_length=6, max_length=6, trim_whitespace=True)
+    new_password = serializers.CharField(write_only=True, min_length=8)
+
+    def validate_email(self, value: str) -> str:
+        return value.strip().lower()
+
+    def validate_code(self, value: str) -> str:
+        if not value.isdigit():
+            raise serializers.ValidationError("Enter the 6-digit reset code.")
+        return value
+
+    def validate_new_password(self, value: str) -> str:
+        validate_password(value)
+        return value

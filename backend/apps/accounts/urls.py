@@ -12,6 +12,8 @@ Purpose : URL routes for the accounts app. Mounted at /api/v1/auth/ by config/ur
             POST /api/v1/auth/register/  → RegisterView     (email + password signup)
             POST /api/v1/auth/verify-email/        → VerifyEmailView
             POST /api/v1/auth/resend-verification/ → ResendVerificationView
+            POST /api/v1/auth/request-password-reset/ → RequestPasswordResetView
+            POST /api/v1/auth/reset-password/         → ResetPasswordView
             POST /api/v1/auth/login/               → LoginView
             POST /api/v1/auth/logout/              → LogoutView
             GET  /api/v1/auth/me/                  → CurrentUserView
@@ -30,7 +32,9 @@ from apps.accounts.views import (
     LoginView,
     LogoutView,
     RegisterView,
+    RequestPasswordResetView,
     ResendVerificationView,
+    ResetPasswordView,
     VerifyEmailView,
 )
 
@@ -44,6 +48,12 @@ urlpatterns: list[URLPattern | URLResolver] = [
         ResendVerificationView.as_view(),
         name="auth-resend-verification",
     ),
+    path(
+        "request-password-reset/",
+        RequestPasswordResetView.as_view(),
+        name="auth-request-password-reset",
+    ),
+    path("reset-password/", ResetPasswordView.as_view(), name="auth-reset-password"),
     path("login/", LoginView.as_view(), name="auth-login"),
     path("logout/", LogoutView.as_view(), name="auth-logout"),
     path("me/", CurrentUserView.as_view(), name="auth-me"),

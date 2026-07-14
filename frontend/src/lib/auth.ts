@@ -21,6 +21,21 @@ type ResendVerificationResponse = {
   resend_cooldown_seconds: number;
 };
 
+type PasswordResetRequestInput = {
+  email: string;
+};
+
+type PasswordResetConfirmInput = {
+  code: string;
+  email: string;
+  new_password: string;
+};
+
+type PasswordResetResponse = {
+  detail: string;
+  resend_cooldown_seconds?: number;
+};
+
 type CsrfResponse = {
   csrfToken?: string;
 };
@@ -171,6 +186,16 @@ export function verifyEmail(input: VerifyEmailInput): Promise<AuthState> {
 
 export function resendVerification(input: ResendVerificationInput): Promise<ResendVerificationResponse> {
   return postJson<ResendVerificationResponse>("/auth/resend-verification/", input);
+}
+
+export function requestPasswordReset(
+  input: PasswordResetRequestInput
+): Promise<PasswordResetResponse> {
+  return postJson<PasswordResetResponse>("/auth/request-password-reset/", input);
+}
+
+export function resetPassword(input: PasswordResetConfirmInput): Promise<PasswordResetResponse> {
+  return postJson<PasswordResetResponse>("/auth/reset-password/", input);
 }
 
 export function logout(): Promise<AuthState> {

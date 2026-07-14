@@ -325,6 +325,21 @@ h1 {
   gap: 10px;
 }
 
+.form-text-link {
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 750;
+  justify-self: start;
+}
+
+.auth-inline-button {
+  justify-self: start;
+}
+
+.auth-footer-actions {
+  margin-top: 16px;
+}
+
 .back-link {
   color: var(--accent);
   font-size: 14px;

@@ -103,3 +103,33 @@ class EmailVerificationOTP(models.Model):
 
     def __str__(self) -> str:
         return f"{self.sent_to_email} @ {self.created_at:%Y-%m-%d %H:%M}"
+
+
+class PasswordResetOTP(models.Model):
+    """One-time password reset code for a user account."""
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="password_reset_otps",
+    )
+    code_hash = models.CharField(max_length=128)
+    sent_to_email = models.EmailField()
+    attempts = models.PositiveSmallIntegerField(default=0)
+    expires_at = models.DateTimeField()
+    consumed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    sent_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "accounts_password_reset_otp"
+        verbose_name = "password reset OTP"
+        verbose_name_plural = "password reset OTPs"
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["user", "-created_at"]),
+            models.Index(fields=["sent_to_email", "-created_at"]),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.sent_to_email} @ {self.created_at:%Y-%m-%d %H:%M}"
