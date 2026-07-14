@@ -11,7 +11,7 @@ import os
 from datetime import timedelta
 from typing import Any, NotRequired, TypedDict, cast
 
-import requests  # type: ignore[import-untyped]
+import requests
 from django.utils import timezone
 
 from apps.categories.models import Category
@@ -56,14 +56,16 @@ class RawgAdapter(BaseSourceAdapter[RawgGame]):
         start_date = today - timedelta(days=self.days_back)
         end_date = today + timedelta(days=self.days_forward)
 
+        params: dict[str, str | int] = {
+            "key": self.api_key,
+            "dates": f"{start_date.isoformat()},{end_date.isoformat()}",
+            "ordering": "-added",
+            "page_size": limit,
+        }
+
         response = self.session.get(
             self.games_url,
-            params={
-                "key": self.api_key,
-                "dates": f"{start_date.isoformat()},{end_date.isoformat()}",
-                "ordering": "-added",
-                "page_size": limit,
-            },
+            params=params,
             timeout=self.request_timeout_seconds,
             headers={"Accept": "application/json"},
         )

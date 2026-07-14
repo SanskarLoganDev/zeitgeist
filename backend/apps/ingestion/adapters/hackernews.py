@@ -29,7 +29,7 @@ from __future__ import annotations
 
 from typing import Any, NotRequired, TypedDict, cast
 
-import requests  # type: ignore[import-untyped]
+import requests
 
 from apps.categories.models import Category
 from apps.ingestion.adapters.base import BaseSourceAdapter, NormalizedTrendItem

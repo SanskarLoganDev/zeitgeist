@@ -12,22 +12,15 @@
 locals {
   secrets = {
     # ── Phase 1 ──────────────────────────────────────────────────────────────
-    "django-secret-key"    = "Django SECRET_KEY"
-    "db-password"          = "Cloud SQL postgres user password"
-    "google-client-id"     = "Google OAuth client ID (user login)"
-    "google-client-secret" = "Google OAuth client secret (user login)"
+    "django-secret-key" = "Django SECRET_KEY"
+    "db-password"       = "Cloud SQL postgres user password"
 
-    # ── Phase 2 ──────────────────────────────────────────────────────────────
-    "youtube-api-key"       = "YouTube Data API v3 key"
-    "tmdb-api-key"          = "TMDB API key"
+    # ── Verified source API keys ────────────────────────────────────────────
     "nytimes-api-key"       = "New York Times Most Popular API key"
     "rawg-api-key"          = "RAWG video games API key"
     "football-data-api-key" = "Football-Data API token"
-    "nasa-api-key"          = "NASA Open APIs key"
-    "pubmed-api-key"        = "NCBI E-utilities API key"
 
-    # ── Phase 3 ──────────────────────────────────────────────────────────────
-    "sendgrid-api-key"   = "SendGrid email delivery API key"
+    # ── SMTP email delivery ─────────────────────────────────────────────────
     "smtp-host"          = "SMTP server hostname for verification emails"
     "smtp-host-user"     = "SMTP account username for verification emails"
     "smtp-host-password" = "SMTP account password or app password for verification emails"

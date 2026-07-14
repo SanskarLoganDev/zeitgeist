@@ -5,17 +5,8 @@ django-cors-headers==4.4.*
 psycopg2-binary==2.9.*          # Postgres driver
 gunicorn==22.*                  # WSGI server for Cloud Run
 
-# ── Auth ──────────────────────────────────────────────────────────────────────
-PyJWT==2.9.*                    # JWT issuance and validation
-google-auth==2.*                # Google OAuth token verification
-
-# ── Data ingestion — Phase 1 ──────────────────────────────────────────────────
-requests==2.32.*                # HTTP client for HN + misc APIs
-
-# ── Data ingestion — Phase 2 ─────────────────────────────────────────────────
-# google-api-python-client==2.*  # YouTube Data API   (uncomment Phase 2)
-# pytrends==4.*                  # Google Trends      (uncomment Phase 2)
-# tmdbsimple==2.*                # TMDB API           (uncomment Phase 2)
+# ── Data ingestion ────────────────────────────────────────────────────────────
+requests==2.32.*                # HTTP client for verified source APIs
 
 # ── AI — Phase 2 ─────────────────────────────────────────────────────────────
 google-genai==1.*                # Gemini via Vertex AI / Gen AI SDK

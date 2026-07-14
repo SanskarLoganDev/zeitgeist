@@ -17,9 +17,7 @@ Purpose : The main coordinator for the daily ingestion batch job.
                   - Update IngestionRun (status=success, items_fetched=N)
                   - On exception: update IngestionRun (status=failed, error_message=...)
                     log the error, and CONTINUE to the next adapter (FR-13)
-            3. Phase 2+: for each category, call ai/client.py → Gemini summary
-            4. Phase 3:  run cross-platform topic detection via embeddings
-            5. Invalidate Redis cache for all affected categories (Phase 2)
+            3. For each category, call ai/client.py → Gemini summary
 
           Key design principle (FR-13):
             Each adapter is isolated in a try/except. One failing source
@@ -29,9 +27,8 @@ Purpose : The main coordinator for the daily ingestion batch job.
 Used by : run_job.py — calls orchestrator.run() as the job entrypoint
           apps/trends/views.py (IngestionTriggerView) — admin manual re-trigger
 
-Phase    : 1 — Week 2 (HN adapter only)
-           Phase 2 — all 9 sources + Gemini AI processing
-           Phase 3 — cross-platform detection + Redis cache invalidation
+Phase    : 1 — starter ingestion
+           Phase 2 — verified sources + Gemini AI processing
 """
 from __future__ import annotations
 

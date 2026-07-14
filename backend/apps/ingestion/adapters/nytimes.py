@@ -10,7 +10,7 @@ from __future__ import annotations
 import os
 from typing import Any, NotRequired, TypedDict, cast
 
-import requests  # type: ignore[import-untyped]
+import requests
 
 from apps.categories.models import Category
 from apps.ingestion.adapters.base import BaseSourceAdapter, NormalizedTrendItem

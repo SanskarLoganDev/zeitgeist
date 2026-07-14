@@ -14,3 +14,4 @@ ruff==0.9.*                     # Upgraded from 0.5 — supports [tool.ruff.lint
 mypy==1.14.*
 django-stubs[compatible-mypy]==5.*   # [compatible-mypy] auto-pins the right mypy version
 djangorestframework-stubs==3.*
+types-requests==2.*

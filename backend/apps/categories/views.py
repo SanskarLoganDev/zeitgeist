@@ -11,17 +11,14 @@ Purpose : DRF API views for category listing and user preference management.
 
             CategoryDetailView    GET /api/v1/categories/{slug}/
               Returns top trending items for a category plus the Gemini AI summary
-              (Phase 2). Checks Redis cache first; falls back to Postgres on miss.
+              from Postgres.
 
             CategoryTrendsView    GET /api/v1/categories/{slug}/trends/
-              Returns trend chart data — relative interest over a time window.
-              Uses stored snapshots for recent windows, pytrends for historical.
-              Phase 2 feature.
+              Reserved route name for future trend chart data.
 
             CategoryItemsView     GET /api/v1/categories/{slug}/items/
               Paginated, filterable list of TrendItems. Supports ?source= and
-              ?window= query params for source filter (FR-09) and time window (FR-07).
-              Phase 2 feature.
+              pagination query params.
 
             PreferencesView       PATCH /api/v1/categories/preferences/
               Updates the authenticated user's selected categories.

@@ -10,20 +10,20 @@ resource "google_sql_database_instance" "main" {
   name                = "zeitgeist-pg"
   database_version    = "POSTGRES_16"
   region              = var.region
-  deletion_protection = false    # Set true before public launch
+  deletion_protection = false # Set true before public launch
 
   settings {
     tier              = "db-f1-micro"
-    edition           = "ENTERPRISE"   # Must be set explicitly — GCP defaults to ENTERPRISE_PLUS
-    availability_type = "ZONAL"        # Switch to REGIONAL before public launch
+    edition           = "ENTERPRISE" # Must be set explicitly — GCP defaults to ENTERPRISE_PLUS
+    availability_type = "ZONAL"      # Switch to REGIONAL before public launch
 
     backup_configuration {
       enabled    = true
-      start_time = "04:00"             # Daily backup at 4am UTC (after ingestion)
+      start_time = "04:00" # Daily backup at 4am UTC (after ingestion)
     }
 
     ip_configuration {
-      ipv4_enabled = true              # Public IP — accessed securely via Cloud SQL Auth Proxy
+      ipv4_enabled = true # Public IP — accessed securely via Cloud SQL Auth Proxy
     }
   }
 

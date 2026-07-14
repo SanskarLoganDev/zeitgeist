@@ -241,7 +241,7 @@ resource "google_cloud_run_v2_service" "api" {
 }
 
 # Allow unauthenticated access to the API.
-# JWT authentication is handled by Django itself, not Cloud Run.
+# Browser authentication is handled by Django itself, not Cloud Run.
 # Without this, every request would need a Google identity token.
 resource "google_cloud_run_v2_service_iam_member" "api_public" {
   project  = var.project_id

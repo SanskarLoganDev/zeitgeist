@@ -3,7 +3,7 @@ backend/apps/accounts/urls.py
 ──────────────────────────────
 Purpose : URL routes for the accounts app. Mounted at /api/v1/auth/ by config/urls.py.
 
-          Auth uses email/password + Django session authentication (not Google OAuth).
+          Auth uses email/password + Django session authentication.
           CSRF tokens are required for all mutating requests — frontend calls /csrf/
           first, then includes X-CSRFToken header on POST/PATCH requests.
 

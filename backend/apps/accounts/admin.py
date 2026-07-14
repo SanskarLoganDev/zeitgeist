@@ -4,11 +4,9 @@ backend/apps/accounts/admin.py
 Purpose : Registers models from the accounts app with the Django admin panel.
           Allows staff users to view and manage User records at /admin/.
 
-          Week 1: registers the basic User model so you can inspect users
-                  created during testing via the admin panel.
-
-          Week 3: add UserAdmin customisation to show google_id, avatar_url,
-                  and UserCategoryPreference as an inline.
+          Registers the custom User model and OTP audit models so staff can
+          inspect local authentication state during development and production
+          support.
 
 Used by : Django admin panel — loaded automatically by Django at startup
           Staff users        — browse to /admin/ to manage users
@@ -41,7 +39,8 @@ class UserAdmin(BaseUserAdmin):  # type: ignore[type-arg]
       - search_fields: username, email
       - fieldsets for editing all standard fields
 
-    Week 3: add extra_fields fieldset for google_id, avatar_url.
+    Email verification is exposed as a readonly timestamp so staff can confirm
+    whether a user completed the OTP flow.
     """
 
     list_display = (

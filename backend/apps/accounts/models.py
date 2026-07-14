@@ -5,28 +5,15 @@ Purpose : Defines the User model for the entire application.
           Extends Django's AbstractUser so we keep all built-in auth behaviour
           (password hashing, permissions, sessions) while adding our own fields.
 
-          Week 1 stub — contains only the bare minimum so that:
-            1. AUTH_USER_MODEL = "accounts.User" in settings/base.py resolves
-            2. Django can create the initial migration and boot successfully
-            3. pytest + CI pass without errors
-
-          Week 3 additions (do not add until OAuth views are being built):
-            - google_id       : unique ID from Google OAuth response
-            - avatar_url      : profile picture URL from Google
-            - onboarding_done : whether user completed interest selection (Phase 3)
-
-          UserCategoryPreference (the join table between User and Category)
-          is also added in Week 3 when the Category model exists to FK into.
-
 Used by : config/settings/base.py   — AUTH_USER_MODEL = "accounts.User"
-          apps/accounts/views.py    — creates/fetches User on OAuth callback (Week 3)
-          apps/categories/models.py — UserCategoryPreference FK to User (Week 3)
-          apps/trends/views.py      — reads user preferences to filter dashboard (Week 3)
+          apps/accounts/views.py    — signup, signin, email OTP, password reset
+          apps/categories/models.py — UserCategoryPreference FK to User
+          apps/trends/views.py      — reads preferences for dashboard filtering
           Django admin              — User visible and manageable at /admin/
-          apps/accounts/authentication.py — reads User from DB per request (Week 3)
+          Django session auth       — reads User from DB per request
 
-Phase    : 1 — Week 1 (stub, enough for migrations and CI to pass)
-           Phase 1 — Week 3 (full implementation: google_id, avatar_url, preferences)
+Phase    : 1 — custom user and session auth
+           Phase 2 — email verification and password reset OTP
 """
 from django.contrib.auth.models import AbstractUser
 from django.db import models
@@ -34,7 +21,7 @@ from django.db import models
 
 class User(AbstractUser):
     """
-    Custom user model — Week 1 stub.
+    Custom user model used by Django's built-in session authentication.
 
     Inherits all standard Django fields:
       username, email, first_name, last_name,
@@ -51,13 +38,8 @@ class User(AbstractUser):
       Django's documentation strongly recommends always starting with a
       custom User model, even if it's empty like this. Changing AUTH_USER_MODEL
       after the first migration is very painful (requires wiping the database).
-      Starting with a custom model now means Week 3 fields (google_id, avatar_url)
-      can be added with a simple migration — no pain.
-
-    Additional fields added in Week 3:
-      google_id       = models.CharField(max_length=128, unique=True, null=True)
-      avatar_url      = models.URLField(blank=True, default="")
-      onboarding_done = models.BooleanField(default=False)
+      Starting with a custom model now lets us add product-specific auth fields
+      with normal migrations instead of replacing Django's default user later.
     """
 
     class Meta:

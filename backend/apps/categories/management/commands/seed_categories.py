@@ -53,14 +53,19 @@ STARTER_CATEGORIES: list[StarterCategory] = [
 
 
 class Command(BaseCommand):
-    help = "Seed Phase 1 starter categories and source configs."
+    help = "Seed starter categories and source configs."
 
     @transaction.atomic
     def handle(self, *args: object, **options: object) -> None:
         categories_created = 0
         source_configs_created = 0
-        deprecated_source_configs_removed, _ = CategorySourceConfig.objects.filter(
-            source="reddit",
+        active_sources = {
+            source
+            for category_data in STARTER_CATEGORIES
+            for source in category_data["sources"]
+        }
+        deprecated_source_configs_removed, _ = CategorySourceConfig.objects.exclude(
+            source__in=active_sources,
         ).delete()
 
         for category_data in STARTER_CATEGORIES:

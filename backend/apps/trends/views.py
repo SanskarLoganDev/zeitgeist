@@ -8,7 +8,7 @@ Purpose : DRF API views for the dashboard and ingestion admin endpoints.
               The main view users see on login. Returns the top 5 TrendItems per
               category for all categories the user has selected in preferences.
               Phase 1: returns all 3 starter categories for all users (no personalisation).
-              Phase 2: filtered by UserCategoryPreference, served from Redis cache.
+              Phase 2: includes stored DB trends, category summaries, and preferences.
 
             IngestionRunListView  GET /api/v1/admin/ingestion/runs/
               Staff-only. Returns the full history of IngestionRun records —
@@ -25,7 +25,7 @@ Used by : apps/trends/urls.py    — routes requests to these views
           Django admin           — IngestionRunListView powers the log display
 
 Phase    : 1 Week 3 — DashboardView (basic, no cache, all categories)
-           Phase 2   — DashboardView with Redis cache + preference filtering
+           Phase 2   — DashboardView with summaries + preference filtering
            Phase 1 Week 2 — IngestionRunListView, IngestionTriggerView
 """
 from __future__ import annotations

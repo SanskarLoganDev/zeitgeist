@@ -9,7 +9,8 @@ Purpose : Defines the BaseSourceAdapter abstract class that ALL source adapters
 
             get_source_name() -> str
               Returns the adapter's identifier string — "hackernews",
-              "youtube" etc. This is stored in TrendItem.source and IngestionRun.source_adapter.
+              "devto", "nytimes", "rawg", or "football_data". This is stored in
+              TrendItem.source and IngestionRun.source_adapter.
 
             fetch(category: Category) -> list[RawItem]
               Calls the external API for the given category.
@@ -23,14 +24,12 @@ Purpose : Defines the BaseSourceAdapter abstract class that ALL source adapters
               TrendSnapshot first, then bulk saves TrendItem rows.
 
           Why this pattern?
-            Adding a new data source (e.g. Spotify) means only creating a new
-            class that inherits from BaseSourceAdapter. The orchestrator picks it
-            up automatically from the CategorySourceConfig DB table. No changes
-            to the orchestrator or any other file needed.
+            Adding a new verified data source means creating a small adapter
+            class and registering it in the orchestrator. CategorySourceConfig
+            then decides which categories use that adapter.
 
 Used by : Every source adapter inherits from this class:
-            hackernews.py, youtube.py, arxiv.py,
-            pubmed.py, tmdb.py, nasa.py, google_trends.py
+            hackernews.py, devto.py, nytimes.py, rawg.py, football_data.py
           apps/ingestion/orchestrator.py — calls fetch() and normalise() on each adapter
 
 Phase    : 1 — Week 2

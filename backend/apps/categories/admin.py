@@ -8,7 +8,7 @@ Purpose : Registers category-related models in the Django admin panel.
 
           What admins can do here:
             - Add a new Category (e.g. "Sports") with a slug and icon
-            - Add CategorySourceConfig rows to enable HN/YouTube/arXiv for it
+            - Add CategorySourceConfig rows for verified adapters
             - Toggle categories active/inactive without any deployment
 
 Used by : Django admin panel — loaded automatically by Django at startup

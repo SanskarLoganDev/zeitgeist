@@ -9,7 +9,7 @@ Purpose : Defines the IngestionRun model — the audit log for every ingestion a
             written after each run.
 
             Fields:
-              source_adapter  : which adapter ran — "hackernews", "youtube", etc.
+              source_adapter  : which adapter ran — "hackernews", "devto", etc.
               category        : which category this run served
               status          : "success" | "partial" | "failed"
               items_fetched   : how many TrendItems were written

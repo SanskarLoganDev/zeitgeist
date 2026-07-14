@@ -11,7 +11,7 @@ import os
 from datetime import UTC, date, datetime, timedelta
 from typing import Any, NotRequired, TypedDict, cast
 
-import requests  # type: ignore[import-untyped]
+import requests
 from django.utils.dateparse import parse_datetime
 
 from apps.categories.models import Category

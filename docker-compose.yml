@@ -50,19 +50,5 @@ services:
       timeout: 5s
       retries: 5
 
-  # ── Phase 2: Redis cache ──────────────────────────────────────────────────
-  # Uncomment when Memorystore (Redis) is added in Phase 2.
-  # Version 7 matches GCP Memorystore for Redis 7.x.
-  # redis:
-  #   image: redis:7-alpine
-  #   restart: unless-stopped
-  #   ports:
-  #     - "6379:6379"
-  #   healthcheck:
-  #     test: ["CMD", "redis-cli", "ping"]
-  #     interval: 5s
-  #     timeout: 5s
-  #     retries: 5
-
 volumes:
   postgres_data:

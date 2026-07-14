@@ -64,7 +64,6 @@ jobs:
     # ── Environment variables ──────────────────────────────────────────────────
     # Injected directly — no .env file in CI.
     # load_dotenv() in development.py is a no-op when vars are already set.
-    # Dummy values for Google — tests never actually call that API.
     env:
       DJANGO_SETTINGS_MODULE: config.settings.development
       DJANGO_SECRET_KEY: ci-test-secret-key-not-used-in-production-min-50-chars
@@ -73,8 +72,6 @@ jobs:
       DB_PASSWORD: test_password
       DB_HOST: localhost
       DB_PORT: "5432"
-      GOOGLE_CLIENT_ID: dummy
-      GOOGLE_CLIENT_SECRET: dummy
 
     steps:
 

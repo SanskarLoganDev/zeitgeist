@@ -44,10 +44,10 @@ def test_seed_categories_maps_gaming_to_rawg() -> None:
 
 
 @pytest.mark.django_db
-def test_seed_categories_removes_deprecated_reddit_source_configs() -> None:
+def test_seed_categories_removes_inactive_source_configs() -> None:
     tech = Category.objects.create(name="Tech", slug="tech", icon="tech")
-    CategorySourceConfig.objects.create(category=tech, source="reddit")
+    CategorySourceConfig.objects.create(category=tech, source="unused_source")
 
     call_command("seed_categories")
 
-    assert not CategorySourceConfig.objects.filter(source="reddit").exists()
+    assert not CategorySourceConfig.objects.filter(source="unused_source").exists()
