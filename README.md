@@ -39,6 +39,9 @@ the app useful as a public demo while keeping source additions evidence-based.
   `https://zeitgeist-api-opowb5bpna-uc.a.run.app/api/v1/health/`.
 - Hacker News, DEV, NYT Most Popular, RAWG, and Football-Data ingestion are
   implemented as verified sources for Tech, News, Gaming, and Sports.
+- Gemini category summaries are implemented for ingestion batches. The Cloud Run
+  Job generates one stored summary per category when `AI_SUMMARIES_ENABLED=true`;
+  dashboard and category pages read the stored summaries from Postgres.
 - Production Cloud SQL has been verified with seeded categories, ingestion runs,
   snapshots, and trend items.
 - Next.js dashboard and category detail pages render stored trend data from the
@@ -250,7 +253,7 @@ zeitgeist-db-maintenance
 | FR-07 | Time window filter (today / 7d / 30d / 90d) | ⬜ Not started |
 | FR-08 | Trend charts per category | ⬜ Not started |
 | FR-09 | Source platform filter | ✅ Initial category-page source buttons |
-| FR-14 | Gemini AI trend summary per category | ⬜ Not started |
+| FR-14 | Gemini AI trend summary per category | ✅ Initial implementation — generated during ingestion and displayed from stored DB data |
 | FR-20 | Admin-configurable categories and source mappings | ⬜ Not started |
 | DEP-01 | Public frontend deployment | 🚧 CD wiring in progress — Cloud Run service `zeitgeist-frontend` |
 
@@ -355,6 +358,11 @@ http://localhost:8000/api/v1/dashboard/
 ```
 
 For Tech, you should see source groups such as `hackernews` and `devto`.
+
+AI summaries are disabled by default locally. To test Gemini summaries locally,
+authenticate with Google Cloud, set `AI_SUMMARIES_ENABLED=true`, and make sure
+`GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION`, `GOOGLE_GENAI_USE_ENTERPRISE`,
+and `GEMINI_MODEL` are present in `backend\.env`.
 
 ### 6. Run tests
 

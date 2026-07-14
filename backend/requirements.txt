@@ -18,7 +18,7 @@ requests==2.32.*                # HTTP client for HN + misc APIs
 # tmdbsimple==2.*                # TMDB API           (uncomment Phase 2)
 
 # ── AI — Phase 2 ─────────────────────────────────────────────────────────────
-# google-cloud-aiplatform==1.*   # Vertex AI SDK      (uncomment Phase 2)
+google-genai==1.*                # Gemini via Vertex AI / Gen AI SDK
 
 # ── Observability ────────────────────────────────────────────────────────────
 python-json-logger==2.*         # Structured JSON logs for Cloud Logging

@@ -1,40 +1,98 @@
-"""
-backend/apps/ai/client.py
-───────────────────────────
-Purpose : Wrapper around the Vertex AI SDK for all AI calls made by the application.
-          Centralises all Gemini and embedding API interactions in one place so
-          prompts, retry logic, and error handling are not scattered across the codebase.
+"""Vertex AI / Gemini client helpers used by batch jobs only."""
+from __future__ import annotations
 
-          Classes:
-            GeminiClient
-              - generate_category_summary(category, trend_items) -> str
-                  Calls Gemini with the CATEGORY_SUMMARY_PROMPT template.
-                  Returns a 2-4 sentence plain-English trend summary.
-                  Called once per category per ingestion run (Phase 2).
+from dataclasses import dataclass
+from typing import Any, Protocol
 
-              - generate_sentiment_tags(trend_items) -> dict[item_id, str]
-                  Batch-calls Gemini to classify multiple items as
-                  Positive / Negative / Neutral in a single API call.
-                  Called during ingestion for all items in a category (Phase 3).
+from django.conf import settings
 
-              - generate_digest_email(user, category_summaries) -> str
-                  Generates personalised weekly digest email content.
-                  Called by the weekly scheduler job (Phase 3).
+from apps.ai.prompts import CATEGORY_SUMMARY_PROMPT
 
-            EmbeddingClient (Phase 3)
-              - embed(texts: list[str]) -> list[list[float]]
-                  Calls Vertex AI text-embedding-004 model.
-                  Returns a list of embedding vectors (one per input text).
-                  Used by cross_platform.py for cosine similarity comparison.
+MAX_PROMPT_ITEMS = 12
 
-          All methods are called ONLY from the ingestion job (run_job.py) or
-          the weekly digest scheduler — never per user request (NFR-06).
 
-Used by : apps/ingestion/orchestrator.py — GeminiClient for summaries + sentiment
-          apps/ai/cross_platform.py      — EmbeddingClient for topic detection
-          Weekly digest scheduler        — GeminiClient for email generation (Phase 3)
+@dataclass(frozen=True)
+class SummaryTrendItem:
+    """Minimal trend item shape sent to Gemini."""
 
-Phase    : 2 — Week 5 (GeminiClient)
-           Phase 3 — EmbeddingClient
-"""
-# Implementation coming in Phase 2 Week 5
+    source: str
+    rank: int
+    title: str
+    score_label: str
+
+
+class GenAIModelClient(Protocol):
+    def generate_content(self, *, model: str, contents: str) -> object: ...
+
+
+class GeminiClient:
+    """Small wrapper around the Google Gen AI SDK.
+
+    Cloud Run authenticates through the attached service account and environment
+    variables such as GOOGLE_CLOUD_PROJECT and GOOGLE_CLOUD_LOCATION.
+    """
+
+    def __init__(
+        self,
+        *,
+        model_name: str | None = None,
+        model_client: GenAIModelClient | None = None,
+    ) -> None:
+        self.model_name = model_name or settings.GEMINI_MODEL
+        self._model_client = model_client
+        self._client: Any | None = None
+
+    def generate_category_summary(
+        self,
+        *,
+        category_name: str,
+        trend_items: list[SummaryTrendItem],
+    ) -> str:
+        prompt = build_category_summary_prompt(
+            category_name=category_name,
+            trend_items=trend_items[:MAX_PROMPT_ITEMS],
+        )
+        response = self._get_model_client().generate_content(
+            model=self.model_name,
+            contents=prompt,
+        )
+        text = getattr(response, "text", None)
+        if not isinstance(text, str) or not text.strip():
+            raise RuntimeError("Gemini returned an empty category summary")
+
+        return text.strip()
+
+    def _get_model_client(self) -> GenAIModelClient:
+        if self._model_client is not None:
+            return self._model_client
+
+        try:
+            from google import genai
+            from google.genai.types import HttpOptions
+        except ImportError as exc:
+            raise RuntimeError("google-genai is required for AI summary generation") from exc
+
+        self._client = genai.Client(http_options=HttpOptions(api_version="v1"))
+        self._model_client = self._client.models
+        return self._model_client
+
+
+def build_category_summary_prompt(
+    *,
+    category_name: str,
+    trend_items: list[SummaryTrendItem],
+) -> str:
+    return CATEGORY_SUMMARY_PROMPT.format(
+        category_name=category_name,
+        trend_items=_format_trend_items(trend_items),
+    )
+
+
+def _format_trend_items(trend_items: list[SummaryTrendItem]) -> str:
+    if not trend_items:
+        return "No trend items are available."
+
+    return "\n".join(
+        f"- {item.source}: {item.title}"
+        for item in trend_items
+    )

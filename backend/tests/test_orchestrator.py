@@ -1,10 +1,11 @@
 import pytest
 
+from apps.ai.client import SummaryTrendItem
 from apps.categories.models import Category, CategorySourceConfig
 from apps.ingestion.adapters.base import BaseSourceAdapter, NormalizedTrendItem
 from apps.ingestion.models import IngestionRun
 from apps.ingestion.orchestrator import run_with_adapters
-from apps.trends.models import TrendItem, TrendSnapshot
+from apps.trends.models import CategoryAISummary, TrendItem, TrendSnapshot
 
 
 class SuccessfulAdapter(BaseSourceAdapter[dict[str, str]]):
@@ -32,6 +33,15 @@ class SuccessfulAdapter(BaseSourceAdapter[dict[str, str]]):
         )
 
 
+class SecondSuccessfulAdapter(SuccessfulAdapter):
+    @classmethod
+    def get_source_name(cls) -> str:
+        return "successful_second"
+
+    def fetch(self, category: Category, *, limit: int = 50) -> list[dict[str, str]]:
+        return [{"title": "Third story"}, {"title": "Fourth story"}][:limit]
+
+
 class FailingAdapter(BaseSourceAdapter[dict[str, str]]):
     @classmethod
     def get_source_name(cls) -> str:
@@ -48,6 +58,25 @@ class FailingAdapter(BaseSourceAdapter[dict[str, str]]):
         rank: int,
     ) -> NormalizedTrendItem:
         raise AssertionError("normalise should not be called when fetch fails")
+
+
+class FakeSummaryGenerator:
+    model_name = "gemini-test"
+
+    def __init__(self, *, should_fail: bool = False) -> None:
+        self.should_fail = should_fail
+        self.calls: list[tuple[str, list[SummaryTrendItem]]] = []
+
+    def generate_category_summary(
+        self,
+        *,
+        category_name: str,
+        trend_items: list[SummaryTrendItem],
+    ) -> str:
+        self.calls.append((category_name, trend_items))
+        if self.should_fail:
+            raise RuntimeError("Gemini unavailable")
+        return "Tech is focused on practical engineering stories."
 
 
 @pytest.mark.django_db
@@ -122,3 +151,56 @@ def test_run_with_adapters_records_unknown_source_as_failure() -> None:
     assert ingestion_run.completed_at is not None
     assert TrendSnapshot.objects.count() == 0
     assert TrendItem.objects.count() == 0
+
+
+@pytest.mark.django_db
+def test_run_with_adapters_generates_category_summary_from_top_items_per_source() -> None:
+    category = Category.objects.create(name="Tech", slug="tech")
+    CategorySourceConfig.objects.create(category=category, source="successful")
+    CategorySourceConfig.objects.create(category=category, source="successful_second")
+    summary_generator = FakeSummaryGenerator()
+
+    exit_code = run_with_adapters(
+        {
+            "successful": SuccessfulAdapter,
+            "successful_second": SecondSuccessfulAdapter,
+        },
+        item_limit=2,
+        generate_ai_summaries=True,
+        summary_generator=summary_generator,
+    )
+
+    assert exit_code == 0
+    assert len(summary_generator.calls) == 1
+    category_name, summary_items = summary_generator.calls[0]
+    assert category_name == "Tech"
+    assert [item.title for item in summary_items] == [
+        "First story",
+        "Second story",
+        "Third story",
+        "Fourth story",
+    ]
+
+    summary = CategoryAISummary.objects.get()
+    assert summary.category == category
+    assert summary.summary_text == "Tech is focused on practical engineering stories."
+    assert summary.model_name == "gemini-test"
+    assert summary.input_item_count == 4
+    assert len(summary.metadata["snapshot_ids"]) == 2
+
+
+@pytest.mark.django_db
+def test_ai_summary_failure_does_not_fail_ingestion() -> None:
+    category = Category.objects.create(name="Tech", slug="tech")
+    CategorySourceConfig.objects.create(category=category, source="successful")
+
+    exit_code = run_with_adapters(
+        {"successful": SuccessfulAdapter},
+        item_limit=2,
+        generate_ai_summaries=True,
+        summary_generator=FakeSummaryGenerator(should_fail=True),
+    )
+
+    assert exit_code == 0
+    assert TrendItem.objects.count() == 2
+    assert CategoryAISummary.objects.count() == 0

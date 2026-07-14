@@ -8,7 +8,7 @@ from django.utils import timezone
 
 from apps.categories.models import Category, CategorySourceConfig
 from apps.ingestion.models import IngestionRun
-from apps.trends.models import TrendItem, TrendSnapshot
+from apps.trends.models import CategoryAISummary, TrendItem, TrendSnapshot
 
 
 @pytest.fixture
@@ -116,6 +116,7 @@ def test_dashboard_returns_latest_hackernews_items(
     assert source["items"][0]["rank"] == 1
     assert source["items"][0]["title"] == "SQLite on the server"
     assert source["items"][0]["score_label"] == "points"
+    assert tech["ai_summary"] is None
 
 
 @pytest.mark.django_db
@@ -161,3 +162,29 @@ def test_dashboard_marks_old_successful_run_as_stale(
     assert response.status_code == 200
     source = response.json()["categories"][0]["sources"][0]
     assert source["status"] == "stale"
+
+
+@pytest.mark.django_db
+def test_dashboard_and_category_detail_include_latest_ai_summary(
+    api_client: Client,
+    hackernews_snapshot: TrendSnapshot,
+) -> None:
+    category = hackernews_snapshot.category
+    CategoryAISummary.objects.create(
+        category=category,
+        summary_text="Engineering stories are leading the Tech category.",
+        model_name="gemini-test",
+        input_item_count=2,
+    )
+
+    dashboard_response = api_client.get("/api/v1/dashboard/")
+    category_response = api_client.get("/api/v1/categories/tech/trends/")
+
+    assert dashboard_response.status_code == 200
+    assert category_response.status_code == 200
+    dashboard_summary = dashboard_response.json()["categories"][0]["ai_summary"]
+    category_summary = category_response.json()["ai_summary"]
+    assert dashboard_summary["summary_text"] == "Engineering stories are leading the Tech category."
+    assert dashboard_summary["model_name"] == "gemini-test"
+    assert dashboard_summary["input_item_count"] == 2
+    assert category_summary["summary_text"] == dashboard_summary["summary_text"]

@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import type { DashboardCategory } from "../types";
 
+import { SummaryText } from "./SummaryText";
 import { TrendSourceGroup } from "./TrendSourceGroup";
 
 type CategorySectionProps = {
@@ -27,6 +28,13 @@ export function CategorySection({
           </Link>
         ) : null}
       </header>
+
+      {category.ai_summary !== null ? (
+        <SummaryText
+          className="category-section-summary"
+          text={category.ai_summary.summary_text}
+        />
+      ) : null}
 
       {category.sources.length > 0 ? (
         category.sources.map((source) => (

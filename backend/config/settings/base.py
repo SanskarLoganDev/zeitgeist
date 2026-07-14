@@ -158,3 +158,11 @@ STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"  # collectstatic target for Django admin CSS
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# ── AI summaries ──────────────────────────────────────────────────────────────
+# The ingestion job uses these to generate stored category summaries through
+# Vertex AI / Gemini. User-facing API requests never call Gemini directly.
+AI_SUMMARIES_ENABLED = os.environ.get("AI_SUMMARIES_ENABLED", "false").lower() == "true"
+GOOGLE_CLOUD_PROJECT = os.environ.get("GOOGLE_CLOUD_PROJECT", "")
+GOOGLE_CLOUD_LOCATION = os.environ.get("GOOGLE_CLOUD_LOCATION", "global")
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.5-flash")

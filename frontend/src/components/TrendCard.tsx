@@ -93,7 +93,6 @@ function FootballMatchCard({ item, displayRank }: Pick<TrendCardProps, "item" | 
         </div>
       </div>
       <div className="football-card-footer">
-        <span>#{displayRank ?? item.rank}</span>
         {penaltyHomeScore !== undefined && penaltyAwayScore !== undefined ? (
           <span>
             Penalties: {penaltyHomeScore} - {penaltyAwayScore}

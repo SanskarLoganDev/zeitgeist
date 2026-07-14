@@ -29,11 +29,19 @@ export type TrendSource = {
   items: TrendItem[];
 };
 
+export type CategoryAISummary = {
+  summary_text: string;
+  model_name: string;
+  input_item_count: number;
+  generated_at: string;
+};
+
 export type DashboardCategory = {
   id: number;
   name: string;
   slug: string;
   icon: string;
+  ai_summary: CategoryAISummary | null;
   sources: TrendSource[];
 };
 
@@ -60,6 +68,7 @@ export type CategoryTrendsResponse = {
   name: string;
   slug: string;
   icon: string;
+  ai_summary: CategoryAISummary | null;
   sources: CategorySourceStatus[];
   items: TrendItem[];
   pagination: CategoryTrendsPagination;

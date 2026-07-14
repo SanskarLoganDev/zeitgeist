@@ -37,11 +37,13 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Mapping
-from typing import Any, TypeAlias
+from typing import Any, Protocol, TypeAlias
 
+from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
+from apps.ai.client import GeminiClient, SummaryTrendItem
 from apps.categories.models import Category
 from apps.ingestion.adapters.base import BaseSourceAdapter, NormalizedTrendItem
 from apps.ingestion.adapters.devto import DevToAdapter
@@ -50,12 +52,24 @@ from apps.ingestion.adapters.hackernews import HackerNewsAdapter
 from apps.ingestion.adapters.nytimes import NYTimesMostPopularAdapter
 from apps.ingestion.adapters.rawg import RawgAdapter
 from apps.ingestion.models import IngestionRun
-from apps.trends.models import TrendItem, TrendSnapshot
+from apps.trends.models import CategoryAISummary, TrendItem, TrendSnapshot
 
 logger = logging.getLogger(__name__)
 
 SourceAdapter: TypeAlias = BaseSourceAdapter[Any]  # noqa: UP040
 AdapterRegistry: TypeAlias = Mapping[str, type[SourceAdapter]]  # noqa: UP040
+
+
+class CategorySummaryGenerator(Protocol):
+    model_name: str
+
+    def generate_category_summary(
+        self,
+        *,
+        category_name: str,
+        trend_items: list[SummaryTrendItem],
+    ) -> str: ...
+
 
 ADAPTER_REGISTRY: AdapterRegistry = {
     DevToAdapter.get_source_name(): DevToAdapter,
@@ -66,6 +80,8 @@ ADAPTER_REGISTRY: AdapterRegistry = {
 }
 
 DEFAULT_ITEM_LIMIT = 50
+SUMMARY_ITEMS_PER_SOURCE = 2
+SUMMARY_MAX_ITEMS = 5
 
 
 def run() -> int:
@@ -80,10 +96,18 @@ def run_with_adapters(
     adapter_registry: AdapterRegistry,
     *,
     item_limit: int = DEFAULT_ITEM_LIMIT,
+    summary_generator: CategorySummaryGenerator | None = None,
+    generate_ai_summaries: bool | None = None,
 ) -> int:
     """Run ingestion for every active category/source config."""
     had_failure = False
     categories = Category.objects.filter(is_active=True).prefetch_related("source_configs")
+    should_generate_ai_summaries = (
+        settings.AI_SUMMARIES_ENABLED
+        if generate_ai_summaries is None
+        else generate_ai_summaries
+    )
+    category_summary_generator = summary_generator
 
     for category in categories:
         source_configs = category.source_configs.filter(is_active=True)
@@ -103,6 +127,13 @@ def run_with_adapters(
             )
             if not success:
                 had_failure = True
+        if should_generate_ai_summaries:
+            if category_summary_generator is None:
+                category_summary_generator = GeminiClient()
+            _generate_category_ai_summary(
+                category=category,
+                summary_generator=category_summary_generator,
+            )
 
     return 1 if had_failure else 0
 
@@ -186,3 +217,59 @@ def _record_unknown_source(category: Category, source: str) -> None:
         error_message=f"No adapter registered for source '{source}'",
         completed_at=timezone.now(),
     )
+
+
+def _generate_category_ai_summary(
+    *,
+    category: Category,
+    summary_generator: CategorySummaryGenerator,
+) -> None:
+    trend_items, snapshot_ids = _summary_input_items(category)
+    if not trend_items:
+        logger.info("Skipping AI summary for category=%s because it has no items", category.slug)
+        return
+
+    try:
+        summary_text = summary_generator.generate_category_summary(
+            category_name=category.name,
+            trend_items=trend_items,
+        )
+    except Exception:
+        logger.exception("AI summary generation failed for category=%s", category.slug)
+        return
+
+    CategoryAISummary.objects.create(
+        category=category,
+        summary_text=summary_text,
+        model_name=summary_generator.model_name,
+        input_item_count=len(trend_items),
+        metadata={"snapshot_ids": snapshot_ids},
+    )
+
+
+def _summary_input_items(category: Category) -> tuple[list[SummaryTrendItem], list[int]]:
+    source_configs = category.source_configs.filter(is_active=True).order_by("source")
+    trend_items: list[SummaryTrendItem] = []
+    snapshot_ids: list[int] = []
+
+    for source_config in source_configs:
+        snapshot = (
+            TrendSnapshot.objects.filter(category=category, source=source_config.source)
+            .order_by("-created_at")
+            .first()
+        )
+        if snapshot is None:
+            continue
+
+        snapshot_ids.append(snapshot.id)
+        for item in snapshot.items.order_by("rank")[:SUMMARY_ITEMS_PER_SOURCE]:
+            trend_items.append(
+                SummaryTrendItem(
+                    source=source_config.source,
+                    rank=item.rank,
+                    title=item.title,
+                    score_label=f"{item.score} {item.score_label}",
+                )
+            )
+
+    return trend_items[:SUMMARY_MAX_ITEMS], snapshot_ids

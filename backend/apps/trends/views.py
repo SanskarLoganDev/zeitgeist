@@ -42,8 +42,8 @@ from rest_framework.views import APIView
 
 from apps.categories.models import Category, CategorySourceConfig
 from apps.ingestion.models import IngestionRun
-from apps.trends.models import TrendItem, TrendSnapshot
-from apps.trends.serializers import TrendItemSerializer
+from apps.trends.models import CategoryAISummary, TrendItem, TrendSnapshot
+from apps.trends.serializers import CategoryAISummarySerializer, TrendItemSerializer
 
 DEFAULT_ITEM_LIMIT = 20
 MAX_ITEM_LIMIT = 50
@@ -159,6 +159,7 @@ def _build_category_payload(
         "name": category.name,
         "slug": category.slug,
         "icon": category.icon,
+        "ai_summary": _latest_category_summary_payload(category),
         "sources": [
             _build_source_payload(
                 category=category,
@@ -214,6 +215,7 @@ def _build_category_detail_payload(
         "name": category.name,
         "slug": category.slug,
         "icon": category.icon,
+        "ai_summary": _latest_category_summary_payload(category),
         "sources": sources,
         "items": TrendItemSerializer(capped_items[start_index:end_index], many=True).data,
         "pagination": {
@@ -269,6 +271,14 @@ def _build_source_status_payload(*, category: Category, source: str) -> dict[str
         "last_updated": _completed_at_value(ingestion_run),
         "status": _freshness_status(ingestion_run),
     }
+
+
+def _latest_category_summary_payload(category: Category) -> dict[str, Any] | None:
+    summary = CategoryAISummary.objects.filter(category=category).order_by("-generated_at").first()
+    if summary is None:
+        return None
+
+    return CategoryAISummarySerializer(summary).data
 
 
 def _completed_at_value(ingestion_run: IngestionRun | None) -> str | None:

@@ -9,9 +9,9 @@ Purpose : Stores all Gemini prompt templates as named string constants.
           Prompts defined here:
             CATEGORY_SUMMARY_PROMPT
               Used by GeminiClient.generate_category_summary() (Phase 2).
-              Instructs Gemini to write a 2-4 sentence trend summary for a
-              category, naming specific trending topics and explaining why
-              they matter. Designed to be specific, not generic filler.
+              Instructs Gemini to write a short category summary from the
+              selected top items, naming specific trending topics without
+              turning the output into a long explainer.
 
             SENTIMENT_TAG_PROMPT (Phase 3)
               Used by GeminiClient.generate_sentiment_tags().
@@ -33,9 +33,22 @@ Used by : apps/ai/client.py — imports and uses these constants in every Gemini
 
 Phase    : 2 — Week 5
 """
-# Prompt templates will be written in Phase 2 Week 5
-# once real ingestion data is available to test against.
+CATEGORY_SUMMARY_PROMPT = """
+You are a concise trend analyst for Zeitgeist.
 
-CATEGORY_SUMMARY_PROMPT = ""  # TODO Phase 2 Week 5
+Write a short category summary for "{category_name}" using only the trend items below.
+
+Requirements:
+- Start with 1 sentence describing the overall trend.
+- Then cover up to 5 listed top topics in 1-2 short sentences each.
+- Be specific and name topics from the items.
+- Do not mention source ranks, item numbers, scores, points, engagement, adds, or match ordering.
+- Do not invent facts beyond the provided titles and source names.
+- Do not write a Wikipedia-style explanation.
+- Keep the whole response under 180 words.
+
+Trend items:
+{trend_items}
+""".strip()
 SENTIMENT_TAG_PROMPT = ""     # TODO Phase 3
 DIGEST_EMAIL_PROMPT = ""      # TODO Phase 3

@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { CategorySidebar } from "../../../components/CategorySidebar";
 import { SourceBadge } from "../../../components/SourceBadge";
+import { SummaryText } from "../../../components/SummaryText";
 import { TrendCard } from "../../../components/TrendCard";
 import { getCategories, getCategoryTrends } from "../../../lib/api";
 import { formatLastUpdated } from "../../../lib/format";
@@ -55,6 +56,22 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
         </header>
 
         <div className="category-detail">
+          {category.ai_summary !== null ? (
+            <section className="ai-summary">
+              <div>
+                <p className="panel-label">AI summary</p>
+                <SummaryText
+                  className="ai-summary-text"
+                  text={category.ai_summary.summary_text}
+                />
+              </div>
+              <p className="ai-summary-meta">
+                {category.ai_summary.model_name} · {category.ai_summary.input_item_count} inputs ·{" "}
+                {formatLastUpdated(category.ai_summary.generated_at)}
+              </p>
+            </section>
+          ) : null}
+
           <div className="source-summary">
             <div className="source-summary-item">
               <span>Source:</span>

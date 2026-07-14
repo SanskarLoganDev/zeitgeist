@@ -5,7 +5,21 @@ from __future__ import annotations
 
 from rest_framework import serializers
 
-from apps.trends.models import TrendItem
+from apps.trends.models import CategoryAISummary, TrendItem
+
+
+class CategoryAISummarySerializer(serializers.ModelSerializer[CategoryAISummary]):
+    """Latest stored category-level Gemini summary."""
+
+    class Meta:
+        model = CategoryAISummary
+        fields = [
+            "summary_text",
+            "model_name",
+            "input_item_count",
+            "generated_at",
+        ]
+        read_only_fields = fields
 
 
 class TrendItemSerializer(serializers.ModelSerializer[TrendItem]):
