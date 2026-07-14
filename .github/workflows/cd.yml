@@ -211,8 +211,8 @@ jobs:
             --image ${{ env.REGISTRY }}/${{ env.REPO }}/api:${{ github.sha }} \
             --port 8000 \
             --min-instances 1 \
-            --set-secrets "DJANGO_SECRET_KEY=django-secret-key:latest,DB_PASSWORD=db-password:latest,GOOGLE_CLIENT_ID=google-client-id:latest,GOOGLE_CLIENT_SECRET=google-client-secret:latest" \
-            --set-env-vars "^|^DB_HOST=/cloudsql/${{ secrets.CLOUD_SQL_CONNECTION_NAME }}|DB_NAME=zeitgeist|DB_USER=zeitgeist|DJANGO_SETTINGS_MODULE=config.settings.production|ALLOWED_HOSTS=$API_HOST|CORS_ALLOWED_ORIGINS=$TRUSTED_ORIGINS|CSRF_TRUSTED_ORIGINS=$TRUSTED_ORIGINS" \
+            --set-secrets "DJANGO_SECRET_KEY=django-secret-key:latest,DB_PASSWORD=db-password:latest,GOOGLE_CLIENT_ID=google-client-id:latest,GOOGLE_CLIENT_SECRET=google-client-secret:latest,EMAIL_HOST=smtp-host:latest,EMAIL_HOST_USER=smtp-host-user:latest,EMAIL_HOST_PASSWORD=smtp-host-password:latest" \
+            --set-env-vars "^|^DB_HOST=/cloudsql/${{ secrets.CLOUD_SQL_CONNECTION_NAME }}|DB_NAME=zeitgeist|DB_USER=zeitgeist|DJANGO_SETTINGS_MODULE=config.settings.production|ALLOWED_HOSTS=$API_HOST|CORS_ALLOWED_ORIGINS=$TRUSTED_ORIGINS|CSRF_TRUSTED_ORIGINS=$TRUSTED_ORIGINS|EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend|EMAIL_PORT=587|EMAIL_USE_TLS=true|EMAIL_USE_SSL=false|EMAIL_VERIFICATION_OTP_TTL_MINUTES=10|EMAIL_VERIFICATION_MAX_ATTEMPTS=5|EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS=60" \
             --region ${{ env.GCP_REGION }} \
             --project ${{ env.GCP_PROJECT_ID }}
 

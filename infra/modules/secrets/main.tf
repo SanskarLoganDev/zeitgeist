@@ -18,16 +18,19 @@ locals {
     "google-client-secret" = "Google OAuth client secret (user login)"
 
     # ── Phase 2 ──────────────────────────────────────────────────────────────
-    "youtube-api-key" = "YouTube Data API v3 key"
-    "tmdb-api-key"    = "TMDB API key"
-    "nytimes-api-key" = "New York Times Most Popular API key"
-    "rawg-api-key"    = "RAWG video games API key"
+    "youtube-api-key"       = "YouTube Data API v3 key"
+    "tmdb-api-key"          = "TMDB API key"
+    "nytimes-api-key"       = "New York Times Most Popular API key"
+    "rawg-api-key"          = "RAWG video games API key"
     "football-data-api-key" = "Football-Data API token"
-    "nasa-api-key"    = "NASA Open APIs key"
-    "pubmed-api-key"  = "NCBI E-utilities API key"
+    "nasa-api-key"          = "NASA Open APIs key"
+    "pubmed-api-key"        = "NCBI E-utilities API key"
 
     # ── Phase 3 ──────────────────────────────────────────────────────────────
-    "sendgrid-api-key" = "SendGrid email delivery API key"
+    "sendgrid-api-key"   = "SendGrid email delivery API key"
+    "smtp-host"          = "SMTP server hostname for verification emails"
+    "smtp-host-user"     = "SMTP account username for verification emails"
+    "smtp-host-password" = "SMTP account password or app password for verification emails"
   }
 }
 
@@ -35,7 +38,7 @@ resource "google_secret_manager_secret" "secrets" {
   for_each            = local.secrets
   project             = var.project_id
   secret_id           = each.key
-  deletion_protection = false    # Allow terraform destroy even after values are set
+  deletion_protection = false # Allow terraform destroy even after values are set
 
   replication {
     auto {}

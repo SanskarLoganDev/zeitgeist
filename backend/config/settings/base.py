@@ -173,7 +173,10 @@ EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
 EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
 EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "true").lower() == "true"
 EMAIL_USE_SSL = os.environ.get("EMAIL_USE_SSL", "false").lower() == "true"
-DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER)
+DEFAULT_FROM_EMAIL = os.environ.get(
+    "DEFAULT_FROM_EMAIL",
+    f"Zeitgeist <{EMAIL_HOST_USER}>" if EMAIL_HOST_USER else "",
+)
 
 EMAIL_VERIFICATION_OTP_TTL_MINUTES = int(
     os.environ.get("EMAIL_VERIFICATION_OTP_TTL_MINUTES", "10")
