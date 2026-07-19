@@ -5,6 +5,7 @@ from dataclasses import dataclass
 import pytest
 
 from apps.ai.client import GeminiClient, SummaryTrendItem, build_category_summary_prompt
+from apps.ai.sanitizers import sanitize_category_summary
 
 
 @dataclass
@@ -61,6 +62,29 @@ def test_gemini_client_uses_model_client_and_strips_response() -> None:
     assert fake_model_client.last_model == "gemini-test"
     assert fake_model_client.last_contents is not None
     assert "Practical browser APIs" in fake_model_client.last_contents
+
+
+def test_gemini_client_removes_degenerate_summary_tokens() -> None:
+    class DegenerateModelClient:
+        def generate_content(self, *, model: str, contents: str) -> FakeResponse:
+            del model, contents
+            return FakeResponse(
+                text="News topics are shifting. news.of_0_0_0_0_0_0_0_0_0_0_0_0"
+            )
+
+    client = GeminiClient(model_name="gemini-test", model_client=DegenerateModelClient())
+
+    summary = client.generate_category_summary(category_name="News", trend_items=[])
+
+    assert summary == "News topics are shifting."
+
+
+def test_sanitize_category_summary_removes_stored_generation_artifacts() -> None:
+    summary = sanitize_category_summary(
+        "Coverage is broad. news.of_0_0_0_0_0_0_0_0_0_0_0_0"
+    )
+
+    assert summary == "Coverage is broad."
 
 
 def test_gemini_client_rejects_empty_response() -> None:

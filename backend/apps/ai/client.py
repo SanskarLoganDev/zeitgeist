@@ -7,6 +7,7 @@ from typing import Any, Protocol
 from django.conf import settings
 
 from apps.ai.prompts import CATEGORY_SUMMARY_PROMPT
+from apps.ai.sanitizers import sanitize_category_summary
 
 MAX_PROMPT_ITEMS = 12
 
@@ -60,7 +61,11 @@ class GeminiClient:
         if not isinstance(text, str) or not text.strip():
             raise RuntimeError("Gemini returned an empty category summary")
 
-        return text.strip()
+        summary = sanitize_category_summary(text)
+        if not summary:
+            raise RuntimeError("Gemini returned an empty category summary")
+
+        return summary
 
     def _get_model_client(self) -> GenAIModelClient:
         if self._model_client is not None:

@@ -5,11 +5,14 @@ from __future__ import annotations
 
 from rest_framework import serializers
 
+from apps.ai.sanitizers import sanitize_category_summary
 from apps.trends.models import CategoryAISummary, TrendItem
 
 
 class CategoryAISummarySerializer(serializers.ModelSerializer[CategoryAISummary]):
     """Latest stored category-level Gemini summary."""
+
+    summary_text = serializers.SerializerMethodField()
 
     class Meta:
         model = CategoryAISummary
@@ -20,6 +23,9 @@ class CategoryAISummarySerializer(serializers.ModelSerializer[CategoryAISummary]
             "generated_at",
         ]
         read_only_fields = fields
+
+    def get_summary_text(self, obj: CategoryAISummary) -> str:
+        return sanitize_category_summary(obj.summary_text)
 
 
 class TrendItemSerializer(serializers.ModelSerializer[TrendItem]):

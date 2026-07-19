@@ -29,7 +29,7 @@ export function CategorySection({
         ) : null}
       </header>
 
-      {category.ai_summary !== null ? (
+      {category.ai_summary ? (
         <SummaryText
           className="category-section-summary"
           text={category.ai_summary.summary_text}

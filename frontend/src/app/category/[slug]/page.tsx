@@ -56,7 +56,7 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
         </header>
 
         <div className="category-detail">
-          {category.ai_summary !== null ? (
+          {category.ai_summary ? (
             <section className="ai-summary">
               <div>
                 <p className="panel-label">AI summary</p>

@@ -188,3 +188,23 @@ def test_dashboard_and_category_detail_include_latest_ai_summary(
     assert dashboard_summary["model_name"] == "gemini-test"
     assert dashboard_summary["input_item_count"] == 2
     assert category_summary["summary_text"] == dashboard_summary["summary_text"]
+
+
+@pytest.mark.django_db
+def test_ai_summary_payload_removes_degenerate_stored_tokens(
+    api_client: Client,
+    hackernews_snapshot: TrendSnapshot,
+) -> None:
+    category = hackernews_snapshot.category
+    CategoryAISummary.objects.create(
+        category=category,
+        summary_text="Coverage is broad. news.of_0_0_0_0_0_0_0_0_0_0_0_0",
+        model_name="gemini-test",
+        input_item_count=1,
+    )
+
+    response = api_client.get("/api/v1/dashboard/")
+
+    assert response.status_code == 200
+    summary = response.json()["categories"][0]["ai_summary"]
+    assert summary["summary_text"] == "Coverage is broad."
