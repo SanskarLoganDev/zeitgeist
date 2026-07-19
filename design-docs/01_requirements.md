@@ -33,6 +33,7 @@ seed rows, Terraform resources, or CD wiring.
 | FR-01 | Users can register and sign in with email/password using Django session authentication and CSRF protection. | Implemented |
 | FR-01a | Users must verify registration email with a one-time code before completing the account flow. | Implemented |
 | FR-01b | Users can reset a forgotten password using an emailed one-time code. | Implemented |
+| FR-01c | Public auth endpoints are rate-limited by IP and email to reduce abuse before expensive password checks or email sends. | Implemented |
 | FR-02 | Onboarding flow for first login category selection. | Deferred |
 | FR-03 | Users can save category preferences from the dashboard. | Implemented |
 
@@ -74,6 +75,7 @@ seed rows, Terraform resources, or CD wiring.
 | NFR-04 | Secrets are stored in Secret Manager and never committed. |
 | NFR-05 | Terraform owns stable infrastructure; CD owns runtime images/env/secrets. |
 | NFR-06 | Production CORS and CSRF trusted origins must include the Cloud Run frontend URLs used by browsers. |
+| NFR-07 | Auth abuse protection must reject excessive attempts with HTTP 429 before doing expensive auth or email work. |
 
 ## 5. Deferred Sources and Services
 

@@ -47,6 +47,7 @@ Delivered so far:
 - Saved category preferences.
 - Registration email OTP verification through SMTP.
 - Forgot-password OTP flow through SMTP.
+- App-level rate limiting on public auth endpoints.
 - Gemini category summaries generated during ingestion.
 - Production CORS/CSRF support for both observed Cloud Run frontend URL formats.
 - Active verified sources:
@@ -84,6 +85,7 @@ only for account verification and password reset.
 | FR-01 email/password session auth | Implemented |
 | FR-01a registration OTP | Implemented |
 | FR-01b forgot-password OTP | Implemented |
+| FR-01c auth endpoint rate limiting | Implemented |
 | FR-02 onboarding | Deferred |
 | FR-03 saved preferences | Implemented |
 | FR-04 dashboard | Implemented |

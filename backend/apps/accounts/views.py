@@ -62,6 +62,7 @@ from apps.accounts.email_verification import (
     verify_registration_otp,
 )
 from apps.accounts.models import User
+from apps.accounts.rate_limits import AuthRateLimitError, enforce_auth_rate_limit
 from apps.accounts.serializers import (
     LoginSerializer,
     PasswordResetConfirmSerializer,
@@ -115,6 +116,13 @@ def _auth_config_payload() -> dict[str, object]:
     }
 
 
+def _rate_limited_response() -> Response:
+    return Response(
+        {"detail": "Too many attempts. Please wait a minute and try again."},
+        status=status.HTTP_429_TOO_MANY_REQUESTS,
+    )
+
+
 @method_decorator(ensure_csrf_cookie, name="dispatch")
 class CSRFTokenView(APIView):
     authentication_classes = [SessionAuthentication]
@@ -138,6 +146,15 @@ class RegisterView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request: Request) -> Response:
+        try:
+            enforce_auth_rate_limit(
+                request,
+                scope="register",
+                email=str(request.data.get("email", "")),
+            )
+        except AuthRateLimitError:
+            return _rate_limited_response()
+
         serializer = RegisterSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
@@ -162,6 +179,15 @@ class VerifyEmailView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request: Request) -> Response:
+        try:
+            enforce_auth_rate_limit(
+                request,
+                scope="verify-email",
+                email=str(request.data.get("email", "")),
+            )
+        except AuthRateLimitError:
+            return _rate_limited_response()
+
         serializer = VerifyEmailSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         try:
@@ -182,6 +208,15 @@ class ResendVerificationView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request: Request) -> Response:
+        try:
+            enforce_auth_rate_limit(
+                request,
+                scope="resend-verification",
+                email=str(request.data.get("email", "")),
+            )
+        except AuthRateLimitError:
+            return _rate_limited_response()
+
         serializer = ResendVerificationSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         try:
@@ -203,6 +238,15 @@ class RequestPasswordResetView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request: Request) -> Response:
+        try:
+            enforce_auth_rate_limit(
+                request,
+                scope="request-password-reset",
+                email=str(request.data.get("email", "")),
+            )
+        except AuthRateLimitError:
+            return _rate_limited_response()
+
         serializer = PasswordResetRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         try:
@@ -233,6 +277,15 @@ class ResetPasswordView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request: Request) -> Response:
+        try:
+            enforce_auth_rate_limit(
+                request,
+                scope="reset-password",
+                email=str(request.data.get("email", "")),
+            )
+        except AuthRateLimitError:
+            return _rate_limited_response()
+
         serializer = PasswordResetConfirmSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         try:
@@ -253,6 +306,15 @@ class LoginView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request: Request) -> Response:
+        try:
+            enforce_auth_rate_limit(
+                request,
+                scope="login",
+                email=str(request.data.get("email", "")),
+            )
+        except AuthRateLimitError:
+            return _rate_limited_response()
+
         serializer = LoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         email = serializer.validated_data["email"]

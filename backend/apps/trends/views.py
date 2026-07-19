@@ -107,20 +107,6 @@ def _get_active_category(slug: str) -> Category:
         raise Http404("Category not found") from exc
 
 
-def _parse_limit(raw_limit: str | None) -> int:
-    if raw_limit is None:
-        return DEFAULT_ITEM_LIMIT
-
-    try:
-        parsed_limit = int(raw_limit)
-    except ValueError:
-        return DEFAULT_ITEM_LIMIT
-
-    if parsed_limit < 1:
-        return DEFAULT_ITEM_LIMIT
-    return min(parsed_limit, MAX_ITEM_LIMIT)
-
-
 def _parse_positive_int(raw_value: str | None, *, default: int) -> int:
     if raw_value is None:
         return default

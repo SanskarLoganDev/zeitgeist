@@ -68,6 +68,7 @@ Cloud SQL Postgres
 - Serves category detail data.
 - Handles signup, signin, logout, email verification, password reset, CSRF, and
   current-user endpoints.
+- Rate-limits public auth mutations by IP and email.
 - Reads and writes saved category preferences.
 - Does not call source APIs during requests.
 
@@ -181,6 +182,7 @@ CI runs ruff, mypy, migrations, and pytest.
 | User auth | Django session auth with CSRF-protected browser requests. |
 | Email verification | One-time code stored hashed with TTL and attempt limits. |
 | Password reset | Separate OTP model using the same TTL/cooldown pattern. |
+| Auth abuse | App-level cache-backed rate limits on login, registration, verification, resend, and password reset endpoints. |
 | Secrets | Secret Manager env injection at Cloud Run startup. |
 | Terraform state | No secret values are stored in Terraform state. |
 | GitHub to GCP | Workload Identity Federation, no JSON service account key. |

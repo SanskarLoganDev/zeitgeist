@@ -50,7 +50,7 @@ THIRD_PARTY_APPS = [
 ]
 
 LOCAL_APPS = [
-    "apps.accounts",    # User model, Google OAuth, JWT
+    "apps.accounts",    # User model, session auth, email OTP
     "apps.categories",  # Category, CategorySourceConfig
     "apps.trends",      # TrendSnapshot, TrendItem, CategoryAISummary, dashboard API
     "apps.ingestion",   # IngestionRun model, orchestrator, source adapters
@@ -122,23 +122,12 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 # ── Django REST Framework ─────────────────────────────────────────────────────
-#
-# WEEK 1 — authentication is intentionally open so the health check works
-# and CI passes. There are no protected endpoints yet anyway.
-#
-# WEEK 3 — swap in the real auth class once JWTCookieAuthentication exists:
-#   "DEFAULT_AUTHENTICATION_CLASSES": [
-#       "apps.accounts.authentication.JWTCookieAuthentication",
-#   ],
-#   "DEFAULT_PERMISSION_CLASSES": [
-#       "rest_framework.permissions.IsAuthenticated",
-#   ],
-#
+# Views opt into SessionAuthentication where browser session/CSRF behavior is needed.
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [],
-    # AllowAny means any request reaches the view without an auth check.
-    # Safe for now — the only live endpoint is /api/v1/health/ which has
-    # no sensitive data. Locked down in Week 3 when user-specific views exist.
+    # AllowAny is the default because several public endpoints support anonymous
+    # browsing and auth bootstrapping. Views that need session behavior opt into
+    # SessionAuthentication and perform their own permission checks.
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.AllowAny",
     ],
@@ -187,6 +176,13 @@ EMAIL_VERIFICATION_MAX_ATTEMPTS = int(
 EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS = int(
     os.environ.get("EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS", "60")
 )
+
+# ── Auth endpoint rate limiting ───────────────────────────────────────────────
+# Lightweight app-level protection for public auth endpoints. This uses Django's
+# cache backend, so it is a practical first line of defense before adding a WAF.
+AUTH_RATE_LIMIT_WINDOW_SECONDS = int(os.environ.get("AUTH_RATE_LIMIT_WINDOW_SECONDS", "60"))
+AUTH_RATE_LIMIT_IP_REQUESTS = int(os.environ.get("AUTH_RATE_LIMIT_IP_REQUESTS", "30"))
+AUTH_RATE_LIMIT_EMAIL_REQUESTS = int(os.environ.get("AUTH_RATE_LIMIT_EMAIL_REQUESTS", "10"))
 
 # ── AI summaries ──────────────────────────────────────────────────────────────
 # The ingestion job uses these to generate stored category summaries through

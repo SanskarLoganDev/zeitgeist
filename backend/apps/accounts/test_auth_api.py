@@ -6,10 +6,16 @@ from typing import Any
 import pytest
 from django.contrib.auth import get_user_model
 from django.core import mail
+from django.core.cache import cache
 from django.test import Client
 from django.utils import timezone
 
-from apps.accounts.email_verification import _hash_otp
+from apps.accounts.email_verification import (
+    EmailVerificationError,
+    _hash_otp,
+    send_registration_otp,
+    verify_registration_otp,
+)
 from apps.accounts.models import EmailVerificationOTP, PasswordResetOTP
 
 
@@ -101,6 +107,38 @@ def test_login_rejects_bad_password() -> None:
 
     assert response.status_code == 400
     assert response.json()["detail"] == "Invalid email or password."
+
+
+@pytest.mark.django_db
+def test_login_rate_limit_returns_429(settings: Any) -> None:
+    cache.clear()
+    settings.AUTH_RATE_LIMIT_EMAIL_REQUESTS = 1
+    settings.AUTH_RATE_LIMIT_IP_REQUESTS = 100
+    user_model = get_user_model()
+    user_model.objects.create_user(
+        username="person@example.com",
+        email="person@example.com",
+        password="correct-password-123",
+        email_verified_at=timezone.now(),
+    )
+    client = Client(enforce_csrf_checks=True)
+    csrf_token = _csrf_token(client)
+
+    first_response = client.post(
+        "/api/v1/auth/login/",
+        data={"email": "person@example.com", "password": "wrong-password"},
+        content_type="application/json",
+        HTTP_X_CSRFTOKEN=csrf_token,
+    )
+    second_response = client.post(
+        "/api/v1/auth/login/",
+        data={"email": "person@example.com", "password": "wrong-password"},
+        content_type="application/json",
+        HTTP_X_CSRFTOKEN=csrf_token,
+    )
+
+    assert first_response.status_code == 400
+    assert second_response.status_code == 429
 
 
 @pytest.mark.django_db
@@ -279,3 +317,55 @@ def test_password_reset_updates_password() -> None:
     assert reset_response.status_code == 200
     assert login_response.status_code == 200
     assert login_response.json()["authenticated"] is True
+
+
+@pytest.mark.django_db
+def test_new_registration_otp_invalidates_existing_active_codes(settings: Any) -> None:
+    settings.EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
+    user_model = get_user_model()
+    user = user_model.objects.create_user(
+        username="person@example.com",
+        email="person@example.com",
+        password="correct-password-123",
+    )
+    old_otp = EmailVerificationOTP.objects.create(
+        user=user,
+        sent_to_email=user.email,
+        code_hash=_hash_otp("111111"),
+        expires_at=timezone.now() + timedelta(minutes=10),
+    )
+
+    send_registration_otp(user)
+
+    old_otp.refresh_from_db()
+    assert old_otp.consumed_at is not None
+    assert EmailVerificationOTP.objects.filter(user=user, consumed_at__isnull=True).count() == 1
+    with pytest.raises(EmailVerificationError):
+        verify_registration_otp(email=user.email, code="111111")
+
+
+@pytest.mark.django_db
+def test_registration_otp_is_consumed_after_max_failed_attempts(settings: Any) -> None:
+    settings.EMAIL_VERIFICATION_MAX_ATTEMPTS = 2
+    user_model = get_user_model()
+    user = user_model.objects.create_user(
+        username="person@example.com",
+        email="person@example.com",
+        password="correct-password-123",
+    )
+    otp = EmailVerificationOTP.objects.create(
+        user=user,
+        sent_to_email=user.email,
+        code_hash=_hash_otp("123456"),
+        attempts=1,
+        expires_at=timezone.now() + timedelta(minutes=10),
+    )
+
+    with pytest.raises(EmailVerificationError):
+        verify_registration_otp(email=user.email, code="000000")
+
+    otp.refresh_from_db()
+    assert otp.attempts == 2
+    assert otp.consumed_at is not None
+    with pytest.raises(EmailVerificationError):
+        verify_registration_otp(email=user.email, code="123456")

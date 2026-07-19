@@ -256,7 +256,7 @@ resource "google_cloud_run_v2_service" "frontend" {
   project             = var.project_id
   name                = "zeitgeist-frontend"
   location            = var.region
-  deletion_protection = true
+  deletion_protection = false # Allow terraform destroy to work cleanly
 
   depends_on = [null_resource.iam_propagation_delay]
 

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import secrets
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from django.conf import settings
 from django.core.mail import send_mail
@@ -15,6 +15,7 @@ def send_registration_otp(user: User) -> EmailVerificationOTP:
     """Create and send a fresh registration verification OTP."""
     code = _generate_otp()
     now = timezone.now()
+    _consume_active_registration_otps(user=user, consumed_at=now)
     otp = EmailVerificationOTP.objects.create(
         user=user,
         code_hash=_hash_otp(code),
@@ -38,6 +39,7 @@ def send_password_reset_otp(user: User) -> PasswordResetOTP:
     """Create and send a fresh password reset OTP."""
     code = _generate_otp()
     now = timezone.now()
+    _consume_active_password_reset_otps(user=user, consumed_at=now)
     otp = PasswordResetOTP.objects.create(
         user=user,
         code_hash=_hash_otp(code),
@@ -84,12 +86,15 @@ def verify_registration_otp(*, email: str, code: str) -> User:
         raise EmailVerificationError("Invalid or expired verification code.")
 
     if otp.attempts >= settings.EMAIL_VERIFICATION_MAX_ATTEMPTS:
+        _consume_registration_otp(otp)
         raise EmailVerificationError("Invalid or expired verification code.")
 
     otp.attempts += 1
     otp.save(update_fields=["attempts"])
 
     if not constant_time_compare(otp.code_hash, _hash_otp(code.strip())):
+        if otp.attempts >= settings.EMAIL_VERIFICATION_MAX_ATTEMPTS:
+            _consume_registration_otp(otp)
         raise EmailVerificationError("Invalid or expired verification code.")
 
     now = timezone.now()
@@ -166,12 +171,15 @@ def reset_password_with_otp(*, email: str, code: str, new_password: str) -> User
         raise EmailVerificationError("Invalid or expired reset code.")
 
     if otp.attempts >= settings.EMAIL_VERIFICATION_MAX_ATTEMPTS:
+        _consume_password_reset_otp(otp)
         raise EmailVerificationError("Invalid or expired reset code.")
 
     otp.attempts += 1
     otp.save(update_fields=["attempts"])
 
     if not constant_time_compare(otp.code_hash, _hash_otp(code.strip())):
+        if otp.attempts >= settings.EMAIL_VERIFICATION_MAX_ATTEMPTS:
+            _consume_password_reset_otp(otp)
         raise EmailVerificationError("Invalid or expired reset code.")
 
     now = timezone.now()
@@ -192,3 +200,27 @@ def _generate_otp() -> str:
 
 def _hash_otp(code: str) -> str:
     return salted_hmac("accounts.email_verification_otp", code).hexdigest()
+
+
+def _consume_active_registration_otps(*, user: User, consumed_at: datetime) -> None:
+    EmailVerificationOTP.objects.filter(
+        user=user,
+        consumed_at__isnull=True,
+    ).update(consumed_at=consumed_at)
+
+
+def _consume_active_password_reset_otps(*, user: User, consumed_at: datetime) -> None:
+    PasswordResetOTP.objects.filter(
+        user=user,
+        consumed_at__isnull=True,
+    ).update(consumed_at=consumed_at)
+
+
+def _consume_registration_otp(otp: EmailVerificationOTP) -> None:
+    otp.consumed_at = timezone.now()
+    otp.save(update_fields=["consumed_at"])
+
+
+def _consume_password_reset_otp(otp: PasswordResetOTP) -> None:
+    otp.consumed_at = timezone.now()
+    otp.save(update_fields=["consumed_at"])
