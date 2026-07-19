@@ -189,6 +189,10 @@ Copy the hostname only into `infra\terraform.tfvars`:
 allowed_hosts = "zeitgeist-api-xxxxx-uc.a.run.app"
 ```
 
+For deployed runtime, CD sets `ALLOWED_HOSTS` with both backend Cloud Run URL
+formats: the hash-style host and the regional/project-number host. This lets
+both backend URLs pass Django's host validation.
+
 Then populate secrets and update non-secret runtime config:
 
 ```cmd
