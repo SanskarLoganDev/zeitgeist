@@ -1,6 +1,7 @@
 """Vertex AI / Gemini client helpers used by batch jobs only."""
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any, Protocol
 
@@ -20,6 +21,7 @@ class SummaryTrendItem:
     rank: int
     title: str
     score_label: str
+    metadata: Mapping[str, object] | None = None
 
 
 class GenAIModelClient(Protocol):
@@ -89,6 +91,7 @@ def build_category_summary_prompt(
 ) -> str:
     return CATEGORY_SUMMARY_PROMPT.format(
         category_name=category_name,
+        category_guidance=_category_guidance(category_name),
         trend_items=_format_trend_items(trend_items),
     )
 
@@ -97,7 +100,112 @@ def _format_trend_items(trend_items: list[SummaryTrendItem]) -> str:
     if not trend_items:
         return "No trend items are available."
 
-    return "\n".join(
-        f"- {item.source}: {item.title}"
-        for item in trend_items
+    return "\n\n".join(_format_trend_item(item) for item in trend_items)
+
+
+def _format_trend_item(item: SummaryTrendItem) -> str:
+    lines = [
+        f"- Source: {_source_label(item.source)}",
+        f"  Rank: {item.rank}",
+        f"  Title: {item.title}",
+        f"  Signal: {item.score_label}",
+    ]
+    details = _metadata_details(item)
+    if details:
+        lines.append(f"  Details: {details}")
+    return "\n".join(lines)
+
+
+def _metadata_details(item: SummaryTrendItem) -> str:
+    metadata = item.metadata or {}
+
+    if item.source == "football_data":
+        parts = _football_details(metadata)
+    else:
+        parts = _generic_metadata_details(metadata)
+
+    return "; ".join(parts[:5])
+
+
+def _football_details(metadata: Mapping[str, object]) -> list[str]:
+    parts: list[str] = []
+    competition = _string_metadata(metadata, "competition_name")
+    status = _string_metadata(metadata, "status_label")
+    stage = _string_metadata(metadata, "stage_label")
+    home_team = _string_metadata(metadata, "home_team")
+    away_team = _string_metadata(metadata, "away_team")
+    home_score = _int_metadata(metadata, "home_score")
+    away_score = _int_metadata(metadata, "away_score")
+
+    if competition:
+        parts.append(f"Competition: {competition}")
+    if stage:
+        parts.append(f"Stage: {stage}")
+    if status:
+        parts.append(f"Status: {status}")
+    if home_team and away_team and home_score is not None and away_score is not None:
+        parts.append(f"Score: {home_team} {home_score}-{away_score} {away_team}")
+
+    return parts
+
+
+def _generic_metadata_details(metadata: Mapping[str, object]) -> list[str]:
+    allowed_keys = ("published_date", "released", "ratings_count")
+    parts: list[str] = []
+    for key in allowed_keys:
+        value = metadata.get(key)
+        if isinstance(value, str) and value.strip():
+            parts.append(f"{key.replace('_', ' ').title()}: {value.strip()}")
+        elif isinstance(value, int):
+            parts.append(f"{key.replace('_', ' ').title()}: {value}")
+    return parts
+
+
+def _category_guidance(category_name: str) -> str:
+    guidance_by_category = {
+        "gaming": (
+            "Focus on player interest, releases, sequels, ratings, and adds. "
+            "If the signal is adds, describe it as player interest."
+        ),
+        "news": (
+            "Focus on public storylines and the people, places, or institutions named in titles. "
+            "Do not sensationalize tragedy."
+        ),
+        "sports": (
+            "Focus on matchups, results, scorelines, competitions, and form. "
+            "If a match is finished, mention the winner and score. "
+            "If a match is scheduled, describe it as upcoming."
+        ),
+        "tech": (
+            "Focus on developer interest, tools, platforms, AI, infrastructure, programming, and security. "
+            "Prefer concrete technology names over broad phrases."
+        ),
+    }
+    return guidance_by_category.get(
+        category_name.lower(),
+        "Focus on concrete topics from the provided titles and explain why they stand out.",
     )
+
+
+def _source_label(source: str) -> str:
+    return {
+        "devto": "DEV",
+        "football_data": "Football-Data",
+        "hackernews": "Hacker News",
+        "nytimes": "New York Times",
+        "rawg": "RAWG",
+    }.get(source, source)
+
+
+def _string_metadata(metadata: Mapping[str, object], key: str) -> str | None:
+    value = metadata.get(key)
+    if isinstance(value, str) and value.strip():
+        return value.strip()
+    return None
+
+
+def _int_metadata(metadata: Mapping[str, object], key: str) -> int | None:
+    value = metadata.get(key)
+    if isinstance(value, int):
+        return value
+    return None

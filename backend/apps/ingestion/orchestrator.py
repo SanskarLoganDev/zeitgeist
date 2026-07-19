@@ -266,6 +266,7 @@ def _summary_input_items(category: Category) -> tuple[list[SummaryTrendItem], li
                     rank=item.rank,
                     title=item.title,
                     score_label=f"{item.score} {item.score_label}",
+                    metadata=item.metadata,
                 )
             )
 

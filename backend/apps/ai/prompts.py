@@ -38,14 +38,22 @@ You are a concise trend analyst for Zeitgeist.
 
 Write a short category summary for "{category_name}" using only the trend items below.
 
-Requirements:
-- Start with 1 sentence describing the overall trend.
-- Then cover up to 5 listed top topics in 1-2 short sentences each.
-- Be specific and name topics from the items.
-- Do not mention source ranks, item numbers, scores, points, engagement, adds, or match ordering.
-- Do not invent facts beyond the provided titles and source names.
-- Do not write a Wikipedia-style explanation.
-- Keep the whole response under 180 words.
+Output format:
+- Start with exactly one short overview sentence.
+- Then write exactly 2 bullet points.
+- Each bullet must use this exact shape:
+  - **Topic name:** One clear sentence explaining why this item matters.
+
+Rules:
+- Use bold only for the topic name in each bullet.
+- Do not use italic markdown or single-asterisk emphasis.
+- Do not mention source ranks or item numbers.
+- You may mention concrete signals such as adds, engagement, most viewed, or match scores when they are provided.
+- Do not invent facts beyond the provided titles, signals, and metadata.
+- Keep the whole response under 120 words.
+
+Category guidance:
+{category_guidance}
 
 Trend items:
 {trend_items}
