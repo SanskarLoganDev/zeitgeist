@@ -84,13 +84,9 @@ jobs:
       - name: Build frontend image
         working-directory: frontend
         run: |
-          API_URL=$(gcloud run services describe zeitgeist-api \
-            --region ${{ env.GCP_REGION }} \
-            --project ${{ env.GCP_PROJECT_ID }} \
-            --format 'value(status.url)')
-
           docker build \
-            --build-arg NEXT_PUBLIC_API_BASE_URL="$API_URL/api/v1" \
+            --build-arg NEXT_PUBLIC_API_BASE_URL="/api/v1" \
+            --build-arg SERVER_API_BASE_URL="https://dailyzeitgeist.xyz/api/v1" \
             --tag ${{ env.REGISTRY }}/${{ env.REPO }}/frontend:${{ github.sha }} \
             --tag ${{ env.REGISTRY }}/${{ env.REPO }}/frontend:latest \
             --file Dockerfile \
@@ -165,22 +161,18 @@ jobs:
 
       # ── Deploy frontend to Cloud Run ────────────────────────────────────────
       # The Next.js app is deployed as its own public Cloud Run service. The API
-      # URL is baked into the browser bundle at build time and also provided at
-      # runtime for server-rendered requests.
+      # browser bundle uses same-origin /api/v1 through dailyzeitgeist.xyz.
+      # Server-rendered requests use an absolute custom-domain URL because Node
+      # fetch requires an absolute URL.
       - name: Deploy frontend to Cloud Run
         run: |
-          API_URL=$(gcloud run services describe zeitgeist-api \
-            --region ${{ env.GCP_REGION }} \
-            --project ${{ env.GCP_PROJECT_ID }} \
-            --format 'value(status.url)')
-
           gcloud run deploy zeitgeist-frontend \
             --image ${{ env.REGISTRY }}/${{ env.REPO }}/frontend:${{ github.sha }} \
             --port 3000 \
             --allow-unauthenticated \
             --service-account ${{ secrets.GCP_APP_SA_EMAIL }} \
             --min-instances 1 \
-            --set-env-vars "NEXT_PUBLIC_API_BASE_URL=$API_URL/api/v1" \
+            --set-env-vars "NEXT_PUBLIC_API_BASE_URL=/api/v1,SERVER_API_BASE_URL=https://dailyzeitgeist.xyz/api/v1" \
             --region ${{ env.GCP_REGION }} \
             --project ${{ env.GCP_PROJECT_ID }}
 
