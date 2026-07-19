@@ -54,6 +54,16 @@ module "cloud_run" {
   depends_on            = [module.cloud_sql, module.artifact_registry]
 }
 
+module "load_balancer" {
+  source                = "./modules/load_balancer"
+  project_id            = var.gcp_project_id
+  region                = var.gcp_region
+  domain                = var.custom_domain
+  api_service_name      = module.cloud_run.api_service_name
+  frontend_service_name = module.cloud_run.frontend_service_name
+  depends_on            = [module.cloud_run]
+}
+
 module "scheduler" {
   source          = "./modules/scheduler"
   project_id      = var.gcp_project_id

@@ -45,6 +45,12 @@ variable "cors_allowed_origins" {
   default     = "http://localhost:3000"
 }
 
+variable "custom_domain" {
+  description = "Primary production domain served by the external HTTPS load balancer."
+  type        = string
+  default     = "dailyzeitgeist.xyz"
+}
+
 variable "github_repository" {
   description = "GitHub repository allowed to impersonate the deploy service account via Workload Identity Federation."
   type        = string

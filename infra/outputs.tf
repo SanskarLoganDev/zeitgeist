@@ -17,3 +17,18 @@ output "cloud_sql_connection_name" {
   description = "Cloud SQL connection name — used by Cloud Run SQL proxy"
   value       = module.cloud_sql.connection_name
 }
+
+output "load_balancer_ip" {
+  description = "Global static IP for the dailyzeitgeist.xyz DNS A record"
+  value       = module.load_balancer.ip_address
+}
+
+output "load_balancer_domain" {
+  description = "Primary production domain served by the load balancer"
+  value       = module.load_balancer.domain
+}
+
+output "managed_ssl_certificate_name" {
+  description = "Google-managed SSL certificate resource name"
+  value       = module.load_balancer.managed_ssl_certificate_name
+}

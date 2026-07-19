@@ -206,9 +206,11 @@ jobs:
             --format 'value(projectNumber)')
           API_REGIONAL_HOST="zeitgeist-api-$PROJECT_NUMBER.${{ env.GCP_REGION }}.run.app"
           API_LEGACY_HOST="zeitgeist-api-opowb5bpna-uc.a.run.app"
-          API_ALLOWED_HOSTS="$API_HOST,$API_REGIONAL_HOST,$API_LEGACY_HOST"
+          CUSTOM_DOMAIN_HOST="dailyzeitgeist.xyz"
+          CUSTOM_DOMAIN_ORIGIN="https://$CUSTOM_DOMAIN_HOST"
+          API_ALLOWED_HOSTS="$CUSTOM_DOMAIN_HOST,$API_HOST,$API_REGIONAL_HOST,$API_LEGACY_HOST"
           FRONTEND_REGIONAL_URL="https://zeitgeist-frontend-$PROJECT_NUMBER.${{ env.GCP_REGION }}.run.app"
-          TRUSTED_ORIGINS="http://localhost:3000,$FRONTEND_URL,$FRONTEND_REGIONAL_URL"
+          TRUSTED_ORIGINS="http://localhost:3000,$CUSTOM_DOMAIN_ORIGIN,$FRONTEND_URL,$FRONTEND_REGIONAL_URL"
 
           gcloud run services update zeitgeist-api \
             --image ${{ env.REGISTRY }}/${{ env.REPO }}/api:${{ github.sha }} \

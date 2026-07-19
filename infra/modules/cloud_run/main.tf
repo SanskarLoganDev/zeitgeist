@@ -410,6 +410,16 @@ output "frontend_url" {
   description = "Cloud Run frontend service URL"
 }
 
+output "api_service_name" {
+  value       = google_cloud_run_v2_service.api.name
+  description = "Cloud Run API service name — used by the load balancer serverless NEG"
+}
+
+output "frontend_service_name" {
+  value       = google_cloud_run_v2_service.frontend.name
+  description = "Cloud Run frontend service name — used by the load balancer serverless NEG"
+}
+
 output "ingestion_job_name" {
   value       = google_cloud_run_v2_job.ingest.name
   description = "Cloud Run Job name — passed to the scheduler module"
