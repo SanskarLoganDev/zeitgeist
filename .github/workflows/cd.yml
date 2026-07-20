@@ -225,26 +225,20 @@ jobs:
       # ── Smoke test ─────────────────────────────────────────────────────────
       - name: Smoke test — health check
         run: |
-          API_URL=$(gcloud run services describe zeitgeist-api \
-            --region ${{ env.GCP_REGION }} \
-            --project ${{ env.GCP_PROJECT_ID }} \
-            --format 'value(status.url)')
-          FRONTEND_URL=$(gcloud run services describe zeitgeist-frontend \
-            --region ${{ env.GCP_REGION }} \
-            --project ${{ env.GCP_PROJECT_ID }} \
-            --format 'value(status.url)')
-          echo "Deployed to: $API_URL"
-          STATUS=$(curl --silent --output /dev/null --write-out "%{http_code}" "$API_URL/api/v1/health/")
+          API_URL="https://dailyzeitgeist.xyz/api/v1/health/"
+          FRONTEND_URL="https://dailyzeitgeist.xyz/"
+          echo "Testing API at: $API_URL"
+          STATUS=$(curl --silent --output /dev/null --write-out "%{http_code}" "$API_URL")
           echo "Health check HTTP status: $STATUS"
           if [ "$STATUS" != "200" ]; then
-            echo "ERROR: Health check failed — Cloud Run serving previous revision"
+            echo "ERROR: Custom-domain API health check failed"
             exit 1
           fi
-          echo "Frontend deployed to: $FRONTEND_URL"
+          echo "Testing frontend at: $FRONTEND_URL"
           FRONTEND_STATUS=$(curl --silent --output /dev/null --write-out "%{http_code}" "$FRONTEND_URL")
           echo "Frontend HTTP status: $FRONTEND_STATUS"
           if [ "$FRONTEND_STATUS" != "200" ]; then
-            echo "ERROR: Frontend smoke test failed"
+            echo "ERROR: Custom-domain frontend smoke test failed"
             exit 1
           fi
           echo "SUCCESS: Deployment complete and healthy"
