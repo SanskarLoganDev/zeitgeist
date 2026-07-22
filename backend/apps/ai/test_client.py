@@ -71,6 +71,33 @@ def test_build_category_summary_prompt_includes_sports_metadata() -> None:
     assert "exactly 2 bullet points" in prompt
 
 
+def test_build_category_summary_prompt_includes_cricket_metadata() -> None:
+    prompt = build_category_summary_prompt(
+        category_name="Sports",
+        trend_items=[
+            SummaryTrendItem(
+                source="cricket_data",
+                rank=1,
+                title="Sri Lanka vs Bangladesh, 2nd ODI",
+                score_label="Sri Lanka won by 5 wickets",
+                metadata={
+                    "match_type": "odi",
+                    "team_a": "Sri Lanka",
+                    "team_b": "Bangladesh",
+                    "status_label": "Sri Lanka won by 5 wickets",
+                    "score_text": "Sri Lanka Inning 1: 245/5 (48.1 ov)",
+                    "venue": "R Premadasa Stadium",
+                },
+            )
+        ],
+    )
+
+    assert "Source: Cricket Data" in prompt
+    assert "Match type: ODI" in prompt
+    assert "Teams: Sri Lanka vs Bangladesh" in prompt
+    assert "Score: Sri Lanka Inning 1: 245/5 (48.1 ov)" in prompt
+
+
 def test_gemini_client_uses_model_client_and_strips_response() -> None:
     fake_model_client = FakeModelClient()
     client = GeminiClient(model_name="gemini-test", model_client=fake_model_client)

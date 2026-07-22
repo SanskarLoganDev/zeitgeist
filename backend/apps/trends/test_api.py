@@ -191,6 +191,46 @@ def test_dashboard_and_category_detail_include_latest_ai_summary(
 
 
 @pytest.mark.django_db
+def test_category_detail_uses_source_specific_ai_summary_when_source_is_filtered(
+    api_client: Client,
+) -> None:
+    sports = Category.objects.create(name="Sports", slug="sports", icon="sports", is_active=True)
+    CategorySourceConfig.objects.create(
+        category=sports,
+        source=CategorySourceConfig.SOURCE_CRICKET_DATA,
+        is_active=True,
+    )
+    CategoryAISummary.objects.create(
+        category=sports,
+        summary_text="Sports are mixed today.",
+        model_name="gemini-test",
+        input_item_count=4,
+        metadata={"snapshot_ids": [1]},
+    )
+    CategoryAISummary.objects.create(
+        category=sports,
+        summary_text="Cricket results lead the sports page.",
+        model_name="gemini-test",
+        input_item_count=2,
+        metadata={"snapshot_ids": [2], "source": CategorySourceConfig.SOURCE_CRICKET_DATA},
+    )
+
+    response = api_client.get("/api/v1/categories/sports/trends/?source=cricket_data")
+
+    assert response.status_code == 200
+    payload = response.json()
+    summary = payload["ai_summary"]
+    assert summary["summary_text"] == "Cricket results lead the sports page."
+    assert summary["input_item_count"] == 2
+    assert payload["source_ai_summaries"] == [
+        {
+            "source": "cricket_data",
+            "ai_summary": summary,
+        }
+    ]
+
+
+@pytest.mark.django_db
 def test_ai_summary_payload_removes_degenerate_stored_tokens(
     api_client: Client,
     hackernews_snapshot: TrendSnapshot,

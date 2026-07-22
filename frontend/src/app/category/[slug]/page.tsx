@@ -7,6 +7,7 @@ import { SummaryText } from "../../../components/SummaryText";
 import { TrendCard } from "../../../components/TrendCard";
 import { getCategories, getCategoryTrends } from "../../../lib/api";
 import { formatLastUpdated } from "../../../lib/format";
+import type { CategoryAISummary, SourceAISummary } from "../../../types";
 
 export const dynamic = "force-dynamic";
 
@@ -31,7 +32,12 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
   }
 
   const page = parsePage(resolvedSearchParams?.page);
-  const selectedSource = parseSource(resolvedSearchParams?.source, knownCategory.sources);
+  const requestedSource = parseSource(resolvedSearchParams?.source, knownCategory.sources);
+  const selectedSource = selectedCategorySource({
+    requestedSource,
+    slug,
+    sources: knownCategory.sources
+  });
   const category = await getCategoryTrends(slug, { page, pageSize: 10, source: selectedSource });
   const previousPage = category.pagination.page > 1 ? category.pagination.page - 1 : null;
   const nextPage =
@@ -39,6 +45,10 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
       ? category.pagination.page + 1
       : null;
   const lastUpdated = latestLastUpdated(category.sources.map((source) => source.last_updated));
+  const sportsSourceSummaries =
+    category.slug === "sports"
+      ? visibleSportsSourceSummaries(category.source_ai_summaries, category.ai_summary)
+      : [];
 
   return (
     <main className="app-shell">
@@ -49,14 +59,36 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
             <p className="eyebrow">Category detail</p>
             <h1>{category.name}</h1>
             <p className="lede">
-              Top stored trends for this category, ranked across the latest verified source
-              snapshots.
+              {category.slug === "sports"
+                ? "Latest stored matches for the selected sport source."
+                : "Top stored trends for this category, ranked across the latest verified source snapshots."}
             </p>
           </div>
         </header>
 
         <div className="category-detail">
-          {category.ai_summary ? (
+          {category.slug === "sports" && sportsSourceSummaries.length > 0 ? (
+            <div className="sports-summary-list">
+              {sportsSourceSummaries.map((sourceSummary) => (
+                <section className="ai-summary" key={sourceSummary.source}>
+                  <div>
+                    <p className="panel-label">
+                      <SourceBadge source={sourceSummary.source} /> AI summary
+                    </p>
+                    <SummaryText
+                      className="ai-summary-text"
+                      text={sourceSummary.ai_summary.summary_text}
+                    />
+                  </div>
+                  <p className="ai-summary-meta">
+                    {sourceSummary.ai_summary.model_name} ·{" "}
+                    {sourceSummary.ai_summary.input_item_count} inputs ·{" "}
+                    {formatLastUpdated(sourceSummary.ai_summary.generated_at)}
+                  </p>
+                </section>
+              ))}
+            </div>
+          ) : category.ai_summary ? (
             <section className="ai-summary">
               <div>
                 <p className="panel-label">AI summary</p>
@@ -75,12 +107,18 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
           <div className="source-summary">
             <div className="source-summary-item">
               <span>Source:</span>
-              <Link
-                className={selectedSource === undefined ? "source-filter source-filter-active" : "source-filter"}
-                href={`/category/${category.slug}`}
-              >
-                All
-              </Link>
+              {category.slug !== "sports" ? (
+                <Link
+                  className={
+                    selectedSource === undefined
+                      ? "source-filter source-filter-active"
+                      : "source-filter"
+                  }
+                  href={`/category/${category.slug}`}
+                >
+                  All
+                </Link>
+              ) : null}
               {category.sources.map((source) => (
                 <Link
                   className={
@@ -150,6 +188,50 @@ function parseSource(rawSource: string | string[] | undefined, validSources: str
   }
 
   return value;
+}
+
+type VisibleSourceAISummary = {
+  source: string;
+  ai_summary: CategoryAISummary;
+};
+
+function visibleSportsSourceSummaries(
+  sourceSummaries: SourceAISummary[],
+  fallbackSummary: CategoryAISummary | null
+): VisibleSourceAISummary[] {
+  const summaries = sourceSummaries.filter(
+    (sourceSummary): sourceSummary is VisibleSourceAISummary =>
+      sourceSummary.ai_summary !== null
+  );
+
+  if (summaries.length > 0 || fallbackSummary === null) {
+    return summaries;
+  }
+
+  return [
+    {
+      source: "football_data",
+      ai_summary: fallbackSummary
+    }
+  ];
+}
+
+function selectedCategorySource({
+  requestedSource,
+  slug,
+  sources
+}: {
+  requestedSource: string | undefined;
+  slug: string;
+  sources: string[];
+}): string | undefined {
+  if (requestedSource !== undefined) {
+    return requestedSource;
+  }
+  if (slug === "sports" && sources.includes("cricket_data")) {
+    return "cricket_data";
+  }
+  return undefined;
 }
 
 function categoryPageHref(slug: string, page: number, source: string | undefined): string {

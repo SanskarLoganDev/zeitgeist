@@ -94,6 +94,7 @@ class CategorySourceConfig(models.Model):
     SOURCE_NYTIMES = "nytimes"
     SOURCE_RAWG = "rawg"
     SOURCE_FOOTBALL_DATA = "football_data"
+    SOURCE_CRICKET_DATA = "cricket_data"
 
     SOURCE_CHOICES = [
         (SOURCE_HACKERNEWS, "Hacker News"),
@@ -101,6 +102,7 @@ class CategorySourceConfig(models.Model):
         (SOURCE_NYTIMES, "New York Times"),
         (SOURCE_RAWG, "RAWG"),
         (SOURCE_FOOTBALL_DATA, "Football-Data"),
+        (SOURCE_CRICKET_DATA, "Cricket Data"),
     ]
 
     category = models.ForeignKey(

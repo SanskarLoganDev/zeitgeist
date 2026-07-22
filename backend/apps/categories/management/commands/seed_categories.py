@@ -47,7 +47,10 @@ STARTER_CATEGORIES: list[StarterCategory] = [
         "name": "Sports",
         "slug": "sports",
         "icon": "sports",
-        "sources": [CategorySourceConfig.SOURCE_FOOTBALL_DATA],
+        "sources": [
+            CategorySourceConfig.SOURCE_FOOTBALL_DATA,
+            CategorySourceConfig.SOURCE_CRICKET_DATA,
+        ],
     },
 ]
 

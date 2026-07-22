@@ -217,7 +217,7 @@ jobs:
         run: |
           gcloud run jobs update zeitgeist-ingest \
             --image ${{ env.REGISTRY }}/${{ env.REPO }}/job:${{ github.sha }} \
-            --set-secrets "DJANGO_SECRET_KEY=django-secret-key:latest,DB_PASSWORD=db-password:latest,NYTIMES_API_KEY=nytimes-api-key:latest,RAWG_API_KEY=rawg-api-key:latest,FOOTBALL_DATA_API_KEY=football-data-api-key:latest" \
+            --set-secrets "DJANGO_SECRET_KEY=django-secret-key:latest,DB_PASSWORD=db-password:latest,NYTIMES_API_KEY=nytimes-api-key:latest,RAWG_API_KEY=rawg-api-key:latest,FOOTBALL_DATA_API_KEY=football-data-api-key:latest,CRICKET_DATA_API_KEY=cricket-data-api-key:latest" \
             --set-env-vars "DB_HOST=/cloudsql/${{ secrets.CLOUD_SQL_CONNECTION_NAME }},DB_NAME=zeitgeist,DB_USER=zeitgeist,DJANGO_SETTINGS_MODULE=config.settings.production,GOOGLE_CLOUD_PROJECT=${{ env.GCP_PROJECT_ID }},GOOGLE_CLOUD_LOCATION=global,GOOGLE_GENAI_USE_ENTERPRISE=True,AI_SUMMARIES_ENABLED=true,GEMINI_MODEL=gemini-3.5-flash" \
             --region ${{ env.GCP_REGION }} \
             --project ${{ env.GCP_PROJECT_ID }}

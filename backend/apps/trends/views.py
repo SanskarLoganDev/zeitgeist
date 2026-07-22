@@ -201,7 +201,13 @@ def _build_category_detail_payload(
         "name": category.name,
         "slug": category.slug,
         "icon": category.icon,
-        "ai_summary": _latest_category_summary_payload(category),
+        "ai_summary": _latest_category_summary_payload(
+            category,
+            source=source_filter if category.slug == "sports" else None,
+        ),
+        "source_ai_summaries": _source_ai_summary_payloads(category)
+        if category.slug == "sports"
+        else [],
         "sources": sources,
         "items": TrendItemSerializer(capped_items[start_index:end_index], many=True).data,
         "pagination": {
@@ -259,12 +265,37 @@ def _build_source_status_payload(*, category: Category, source: str) -> dict[str
     }
 
 
-def _latest_category_summary_payload(category: Category) -> dict[str, Any] | None:
-    summary = CategoryAISummary.objects.filter(category=category).order_by("-generated_at").first()
+def _latest_category_summary_payload(
+    category: Category,
+    *,
+    source: str | None = None,
+) -> dict[str, Any] | None:
+    summaries = CategoryAISummary.objects.filter(category=category)
+    if source is not None:
+        summaries = summaries.filter(metadata__source=source)
+    else:
+        summaries = summaries.filter(metadata__source__isnull=True)
+
+    summary = summaries.order_by("-generated_at").first()
     if summary is None:
         return None
 
     return CategoryAISummarySerializer(summary).data
+
+
+def _source_ai_summary_payloads(category: Category) -> list[dict[str, Any]]:
+    summaries: list[dict[str, Any]] = []
+
+    for source_config in _active_source_configs(category):
+        summary = _latest_category_summary_payload(category, source=source_config.source)
+        summaries.append(
+            {
+                "source": source_config.source,
+                "ai_summary": summary,
+            }
+        )
+
+    return summaries
 
 
 def _completed_at_value(ingestion_run: IngestionRun | None) -> str | None:

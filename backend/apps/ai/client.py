@@ -121,6 +121,8 @@ def _metadata_details(item: SummaryTrendItem) -> str:
 
     if item.source == "football_data":
         parts = _football_details(metadata)
+    elif item.source == "cricket_data":
+        parts = _cricket_details(metadata)
     else:
         parts = _generic_metadata_details(metadata)
 
@@ -145,6 +147,29 @@ def _football_details(metadata: Mapping[str, object]) -> list[str]:
         parts.append(f"Status: {status}")
     if home_team and away_team and home_score is not None and away_score is not None:
         parts.append(f"Score: {home_team} {home_score}-{away_score} {away_team}")
+
+    return parts
+
+
+def _cricket_details(metadata: Mapping[str, object]) -> list[str]:
+    parts: list[str] = []
+    match_type = _string_metadata(metadata, "match_type")
+    status = _string_metadata(metadata, "status_label")
+    score_text = _string_metadata(metadata, "score_text")
+    venue = _string_metadata(metadata, "venue")
+    team_a = _string_metadata(metadata, "team_a")
+    team_b = _string_metadata(metadata, "team_b")
+
+    if match_type:
+        parts.append(f"Match type: {match_type.upper()}")
+    if team_a and team_b:
+        parts.append(f"Teams: {team_a} vs {team_b}")
+    if status:
+        parts.append(f"Status: {status}")
+    if score_text:
+        parts.append(f"Score: {score_text}")
+    if venue:
+        parts.append(f"Venue: {venue}")
 
     return parts
 
@@ -189,6 +214,7 @@ def _category_guidance(category_name: str) -> str:
 
 def _source_label(source: str) -> str:
     return {
+        "cricket_data": "Cricket Data",
         "devto": "DEV",
         "football_data": "Football-Data",
         "hackernews": "Hacker News",

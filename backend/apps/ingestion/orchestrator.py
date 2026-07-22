@@ -43,6 +43,7 @@ from django.utils import timezone
 from apps.ai.client import GeminiClient, SummaryTrendItem
 from apps.categories.models import Category
 from apps.ingestion.adapters.base import BaseSourceAdapter, NormalizedTrendItem
+from apps.ingestion.adapters.cricket_data import CricketDataAdapter
 from apps.ingestion.adapters.devto import DevToAdapter
 from apps.ingestion.adapters.football_data import FootballDataAdapter
 from apps.ingestion.adapters.hackernews import HackerNewsAdapter
@@ -69,6 +70,7 @@ class CategorySummaryGenerator(Protocol):
 
 
 ADAPTER_REGISTRY: AdapterRegistry = {
+    CricketDataAdapter.get_source_name(): CricketDataAdapter,
     DevToAdapter.get_source_name(): DevToAdapter,
     FootballDataAdapter.get_source_name(): FootballDataAdapter,
     HackerNewsAdapter.get_source_name(): HackerNewsAdapter,
@@ -131,6 +133,11 @@ def run_with_adapters(
                 category=category,
                 summary_generator=category_summary_generator,
             )
+            if category.slug == "sports":
+                _generate_source_ai_summaries(
+                    category=category,
+                    summary_generator=category_summary_generator,
+                )
 
     return 1 if had_failure else 0
 
@@ -244,8 +251,56 @@ def _generate_category_ai_summary(
     )
 
 
-def _summary_input_items(category: Category) -> tuple[list[SummaryTrendItem], list[int]]:
+def _generate_source_ai_summaries(
+    *,
+    category: Category,
+    summary_generator: CategorySummaryGenerator,
+) -> None:
     source_configs = category.source_configs.filter(is_active=True).order_by("source")
+
+    for source_config in source_configs:
+        trend_items, snapshot_ids = _summary_input_items(category, source=source_config.source)
+        if not trend_items:
+            logger.info(
+                "Skipping source AI summary for category=%s source=%s because it has no items",
+                category.slug,
+                source_config.source,
+            )
+            continue
+
+        try:
+            summary_text = summary_generator.generate_category_summary(
+                category_name=category.name,
+                trend_items=trend_items,
+            )
+        except Exception:
+            logger.exception(
+                "Source AI summary generation failed for category=%s source=%s",
+                category.slug,
+                source_config.source,
+            )
+            continue
+
+        CategoryAISummary.objects.create(
+            category=category,
+            summary_text=summary_text,
+            model_name=summary_generator.model_name,
+            input_item_count=len(trend_items),
+            metadata={
+                "snapshot_ids": snapshot_ids,
+                "source": source_config.source,
+            },
+        )
+
+
+def _summary_input_items(
+    category: Category,
+    *,
+    source: str | None = None,
+) -> tuple[list[SummaryTrendItem], list[int]]:
+    source_configs = category.source_configs.filter(is_active=True).order_by("source")
+    if source is not None:
+        source_configs = source_configs.filter(source=source)
     trend_items: list[SummaryTrendItem] = []
     snapshot_ids: list[int] = []
 

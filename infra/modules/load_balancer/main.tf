@@ -1,6 +1,7 @@
 # ── Production Entry Point ────────────────────────────────────────────────────
 # Public HTTPS load balancer for dailyzeitgeist.xyz.
-# Cloud Run direct run.app access intentionally stays open during this phase.
+# Cloud Run ingress is set to internal-and-cloud-load-balancing on both services.
+# Direct run.app access is blocked — all public traffic flows through this LB.
 
 locals {
   name_prefix = "zeitgeist"

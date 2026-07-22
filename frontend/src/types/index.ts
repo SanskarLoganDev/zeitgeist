@@ -36,6 +36,11 @@ export type CategoryAISummary = {
   generated_at: string;
 };
 
+export type SourceAISummary = {
+  source: string;
+  ai_summary: CategoryAISummary | null;
+};
+
 export type DashboardCategory = {
   id: number;
   name: string;
@@ -69,6 +74,7 @@ export type CategoryTrendsResponse = {
   slug: string;
   icon: string;
   ai_summary: CategoryAISummary | null;
+  source_ai_summaries: SourceAISummary[];
   sources: CategorySourceStatus[];
   items: TrendItem[];
   pagination: CategoryTrendsPagination;

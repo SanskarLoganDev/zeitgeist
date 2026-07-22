@@ -19,6 +19,7 @@ locals {
     "nytimes-api-key"       = "New York Times Most Popular API key"
     "rawg-api-key"          = "RAWG video games API key"
     "football-data-api-key" = "Football-Data API token"
+    "cricket-data-api-key"  = "Cricket Data API key"
 
     # ── SMTP email delivery ─────────────────────────────────────────────────
     "smtp-host"          = "SMTP server hostname for verification emails"

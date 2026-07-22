@@ -1,14 +1,16 @@
 import type { FreshnessStatus } from "../types";
 
 const SOURCE_LABELS: Record<string, string> = {
+  cricket_data: "Cricket Data",
   devto: "DEV",
-  football_data: "Football-Data",
+  football_data: "Football Data",
   hackernews: "Hacker News",
   nytimes: "New York Times",
   rawg: "RAWG"
 };
 
 const SOURCE_SHORT_LABELS: Record<string, string> = {
+  cricket_data: "Cricket",
   devto: "DEV",
   football_data: "Football",
   hackernews: "HN",
@@ -24,6 +26,10 @@ export function formatSourceShort(source: string): string {
   return SOURCE_SHORT_LABELS[source] ?? formatSource(source);
 }
 
+export function formatScore(score: number): string {
+  return new Intl.NumberFormat("en-US").format(score);
+}
+
 export function formatLastUpdated(value: string | null): string {
   if (value === null) {
     return "No successful run yet";
@@ -34,7 +40,7 @@ export function formatLastUpdated(value: string | null): string {
     return "Unknown update time";
   }
 
-  return new Intl.DateTimeFormat("en", {
+  return new Intl.DateTimeFormat("en-US", {
     month: "short",
     day: "numeric",
     hour: "numeric",

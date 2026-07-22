@@ -85,6 +85,7 @@ class TrendItem(models.Model):
       NYTimes   → rank-derived score,  score_label="most viewed"
       RAWG      → user library adds,   score_label="adds"
       Football  → match timestamp,     score_label="Full-time - 3-2"
+      Cricket   → match timestamp,     score_label="India won by 4 wickets"
 
     external_url is the URL the item links to (the actual article/repo/video).
     url is the platform URL (e.g. the HN discussion URL).
@@ -95,6 +96,7 @@ class TrendItem(models.Model):
     SOURCE_NYTIMES = "nytimes"
     SOURCE_RAWG = "rawg"
     SOURCE_FOOTBALL_DATA = "football_data"
+    SOURCE_CRICKET_DATA = "cricket_data"
 
     SOURCE_CHOICES = [
         (SOURCE_HACKERNEWS, "Hacker News"),
@@ -102,6 +104,7 @@ class TrendItem(models.Model):
         (SOURCE_NYTIMES, "New York Times"),
         (SOURCE_RAWG, "RAWG"),
         (SOURCE_FOOTBALL_DATA, "Football-Data"),
+        (SOURCE_CRICKET_DATA, "Cricket Data"),
     ]
 
     # Phase 3 sentiment choices

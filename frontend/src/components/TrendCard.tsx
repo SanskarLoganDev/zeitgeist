@@ -1,6 +1,6 @@
 import type { TrendItem } from "../types";
 
-import { formatSourceShort } from "../lib/format";
+import { formatScore, formatSourceShort } from "../lib/format";
 
 import { SourceBadge } from "./SourceBadge";
 
@@ -19,6 +19,9 @@ export function TrendCard({
 }: TrendCardProps) {
   if (item.source === "football_data") {
     return <FootballMatchCard displayRank={displayRank} item={item} />;
+  }
+  if (item.source === "cricket_data") {
+    return <CricketMatchCard displayRank={displayRank} item={item} />;
   }
 
   const primaryUrl = item.external_url ?? item.url;
@@ -50,7 +53,7 @@ export function TrendCard({
         </div>
       </div>
       <span className="score">
-        {item.score.toLocaleString()} {item.score_label}
+        {formatScore(item.score)} {item.score_label}
         {sourceSuffix}
       </span>
     </article>
@@ -104,6 +107,44 @@ function FootballMatchCard({ item, displayRank }: Pick<TrendCardProps, "item" | 
   );
 }
 
+function CricketMatchCard({ item, displayRank }: Pick<TrendCardProps, "item" | "displayRank">) {
+  const metadata = item.metadata;
+  const teamA = stringValue(metadata.team_a) ?? firstTeam(metadata.teams) ?? "Team A";
+  const teamB = stringValue(metadata.team_b) ?? secondTeam(metadata.teams) ?? "Team B";
+  const matchType = stringValue(metadata.match_type)?.toUpperCase() ?? "Cricket";
+  const venue = stringValue(metadata.venue);
+  const statusLabel = stringValue(metadata.status_label) ?? item.score_label;
+  const scoreText = stringValue(metadata.score_text);
+  const dateTimeGmt = stringValue(metadata.date_time_gmt);
+
+  return (
+    <article className="football-card">
+      <div className="football-card-topline">
+        <span>
+          #{displayRank ?? item.rank} · {matchType}
+          {dateTimeGmt !== undefined ? ` · ${formatMatchDate(dateTimeGmt)}` : ""}
+        </span>
+        <strong>{statusLabel}</strong>
+      </div>
+      <div className="football-card-scoreboard">
+        <div className="football-team football-team-home">
+          <span className="football-team-name">{teamA}</span>
+        </div>
+        <div className="football-score football-score-compact">
+          <span>vs</span>
+        </div>
+        <div className="football-team football-team-away">
+          <span className="football-team-name">{teamB}</span>
+        </div>
+      </div>
+      <div className="football-card-footer">
+        {scoreText !== undefined ? <span>{scoreText}</span> : null}
+        {venue !== undefined ? <span>{venue}</span> : null}
+      </div>
+    </article>
+  );
+}
+
 function stringValue(value: unknown): string | undefined {
   if (typeof value !== "string" || value.trim().length === 0) {
     return undefined;
@@ -115,13 +156,27 @@ function numberValue(value: unknown): number | undefined {
   return typeof value === "number" ? value : undefined;
 }
 
+function firstTeam(value: unknown): string | undefined {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+  return stringValue(value[0]);
+}
+
+function secondTeam(value: unknown): string | undefined {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+  return stringValue(value[1]);
+}
+
 function formatMatchDate(value: string): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
     return "Date TBA";
   }
 
-  return new Intl.DateTimeFormat("en", {
+  return new Intl.DateTimeFormat("en-US", {
     month: "short",
     day: "numeric",
     timeZone: "UTC"
