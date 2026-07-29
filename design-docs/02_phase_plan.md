@@ -1,8 +1,8 @@
 # Zeitgeist - Phase and Delivery Plan
 
-**Version:** 3.0
-**Status:** Updated to match current Phase 2 implementation
-**Last Updated:** 2026-07-14
+**Version:** 3.1
+**Status:** Updated to match completed public demo implementation
+**Last Updated:** 2026-07-29
 
 ## 1. Delivery Philosophy
 
@@ -25,55 +25,60 @@ Delivered:
 - GitHub Actions CI/CD with Workload Identity Federation.
 - Dashboard API and category detail API.
 - Stored snapshots and trend items.
-- Graceful source failure logging.
+- Graceful source failure logging and freshness status.
 - Django admin visibility into key models.
 - Initial Next.js frontend.
 
 Phase 1 implementation decisions:
 
-- Django session auth was chosen for the current demo.
+- Django session auth was chosen for the browser app.
 - Source additions were deferred unless access and response shape were verified.
 - Source additions were gated by live API verification.
 
 ## 3. Phase 2 - Public Demo and Product Value
 
-**Status:** In progress
+**Status:** Complete
 
-Delivered so far:
+Delivered:
 
 - Public Next.js frontend on Cloud Run.
 - Public Django API on Cloud Run.
+- Production domain `https://dailyzeitgeist.xyz`.
+- External HTTPS load balancer with managed SSL certificate.
+- HTTP to HTTPS redirect.
+- Same-origin browser API calls under `/api/v1`.
+- Server-side frontend API base set to `https://dailyzeitgeist.xyz/api/v1`.
+- Cloud Run frontend and API ingress restricted to internal and load-balancer traffic.
+- Cloud Armor attached to the API backend service for auth endpoint throttling.
 - Category dashboard and `/category/[slug]` pages.
 - Saved category preferences.
 - Registration email OTP verification through SMTP.
 - Forgot-password OTP flow through SMTP.
 - App-level rate limiting on public auth endpoints.
 - Gemini category summaries generated during ingestion.
-- Production CORS/CSRF support for both observed Cloud Run frontend URL formats.
+- Source-specific Sports summaries for cricket and football.
+- Production CORS/CSRF support for same-origin custom-domain deployment.
 - Active verified sources:
   - Hacker News
   - DEV
   - New York Times Most Popular
   - RAWG
   - Football-Data
+  - Cricket Data
 
-Remaining Phase 2 candidates:
+## 4. Deferred Phase 3 Candidates
 
-- Improve dashboard/category page polish.
-- Add enough snapshot history to support useful time-window UI.
-- Add charts only after the data history makes them meaningful.
-- Add monitoring around ingestion freshness and AI summary generation.
-- Add another category/source only after live verification.
+These are intentionally deferred until there is a stronger product reason or
+enough historical data:
 
-## 4. Phase 3 - Intelligence and Polish
-
-Planned after the public demo is stable:
-
+- First-login onboarding.
+- Time-window filters for today/7d/30d/90d.
+- Category trend charts.
 - Cross-platform topic detection.
 - Sentiment labels.
 - Weekly digest emails.
-- First-login onboarding.
-- Custom domain and launch monitoring.
+- Monitoring around ingestion freshness and AI summary generation.
+- Additional source/category integrations after live verification.
 
 Delivery provider for future weekly email is not decided. SMTP is currently used
 only for account verification and password reset.
@@ -91,26 +96,31 @@ only for account verification and password reset.
 | FR-04 dashboard | Implemented |
 | FR-05 category detail | Implemented |
 | FR-06 trend cards | Implemented |
+| FR-06a sports match-first cards | Implemented |
 | FR-07 time windows | Deferred |
 | FR-08 charts | Deferred |
 | FR-09 source filters | Implemented |
+| FR-09a Sports page without mixed "All" source | Implemented |
 | FR-10 trending everywhere | Deferred |
 | FR-11 scheduled ingestion | Implemented |
 | FR-12 snapshots | Implemented |
 | FR-13 graceful source failure | Implemented |
 | FR-14 category AI summaries | Implemented |
-| FR-15 topic embeddings | Deferred |
-| FR-16 sentiment | Deferred |
-| FR-18 weekly digest | Deferred |
+| FR-14a Sports source-specific AI summaries | Implemented |
+| FR-15 Cricket Data current/recent match ingestion | Implemented |
+| FR-16 production HTTPS load balancer and security routing | Implemented |
 | FR-19 admin ingestion visibility | Implemented |
 | FR-20 DB-backed categories/source mappings | Implemented |
 
-## 6. Near-Term Plan
+## 6. Final Archive Checklist
 
-1. Keep the repo clean by removing unused source placeholders and secret shells.
-2. Review `terraform plan` after cleanup because unused Secret Manager resources
-   are being removed from Terraform.
-3. Push through CI/CD.
-4. Run cloud ingestion and verify Tech, News, Gaming, Sports, AI summaries, OTP
-   auth, and password reset in production.
-5. Decide the next source/category only after a live fetch proves it is useful.
+Before taking down the demo environment:
+
+1. Commit source, infrastructure, design docs, README, and troubleshooting notes.
+2. Verify no real secrets, `.env` files, Terraform state, Terraform variable
+   values, or local secret scripts are staged.
+3. Disable or avoid triggering CD after teardown.
+4. Run `terraform destroy` from `infra` only after confirming Cloud SQL data can
+   be deleted.
+5. Verify Cloud Run, Cloud SQL, Scheduler, Artifact Registry, Secret Manager,
+   Load Balancer, and Cloud Armor resources are removed or no longer billable.
