@@ -8,9 +8,9 @@ variable "github_repository" {
   type    = string
   default = "SanskarLoganDev/zeitgeist"
 }
-variable "wif_pool_id" {
-  type    = string
-  default = "github-pool"
+variable "wif_pool_name" {
+  description = "Full Workload Identity Pool resource name used in the GitHub principalSet member string."
+  type        = string
 }
 variable "allowed_hosts" {
   type    = string

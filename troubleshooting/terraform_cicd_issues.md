@@ -845,6 +845,81 @@ terraform apply -target='module.secrets.google_secret_manager_secret.secrets["ny
 
 ---
 
+## T-14 — Fresh project apply fails because WIF pool does not exist
+
+**Error**
+```text
+Error applying IAM policy for service account
+googleapi: Error 400: Identity Pool does not exist
+(projects/.../locations/global/workloadIdentityPools/github-pool)
+```
+
+**Cause**
+The Cloud Run module created the service-account-level impersonation binding:
+```hcl
+resource "google_service_account_iam_member" "github_wif_user" {
+  role   = "roles/iam.workloadIdentityUser"
+  member = "principalSet://iam.googleapis.com/projects/.../locations/global/workloadIdentityPools/github-pool/attribute.repository/SanskarLoganDev/zeitgeist"
+}
+```
+
+That binding is necessary, but it is not the same thing as creating Workload
+Identity Federation. It only grants access to an identity pool that must already
+exist. In the original GCP project, the pool/provider had been created manually.
+After moving to a new project, Terraform tried to bind GitHub to
+`github-pool`, but the pool itself was missing.
+
+**Fix**
+Manage WIF in Terraform instead of creating it manually:
+
+- Add `infra/modules/workload_identity`
+- Create `google_iam_workload_identity_pool`
+- Create `google_iam_workload_identity_pool_provider`
+- Restrict the provider to the expected GitHub repository with
+  `attribute_condition`
+- Pass `module.workload_identity.pool_name` into the Cloud Run module so only
+  the WIF IAM binding depends on the pool
+- Output the provider name for the GitHub Actions secret
+
+The GitHub Actions secret should be updated from Terraform output:
+```cmd
+terraform output workload_identity_provider_name
+```
+
+Use that value for:
+```text
+GCP_WORKLOAD_IDENTITY_PROVIDER
+```
+
+**Why the old Terraform settings were incomplete**
+These values:
+```hcl
+github_repository = var.github_repository
+wif_pool_id       = var.workload_identity_pool_id
+```
+
+only built the IAM member string for the impersonation binding. They did not
+create the WIF pool or OIDC provider. The complete chain is:
+
+```text
+GitHub Actions OIDC token
+-> Workload Identity Provider validates token
+-> Workload Identity Pool represents the external identity
+-> service account IAM binding allows that repository principal to impersonate zeitgeist-app
+-> GitHub Actions receives short-lived GCP credentials
+```
+
+**Lesson**
+For a project that needs to be recreated cleanly, Terraform must own both sides:
+
+| Terraform resource | Purpose |
+|---|---|
+| `google_iam_workload_identity_pool` | Creates the external identity pool |
+| `google_iam_workload_identity_pool_provider` | Trusts GitHub's OIDC issuer and maps claims |
+| `google_service_account_iam_member.github_wif_user` | Lets the approved GitHub repo impersonate the deploy service account |
+
+---
+
 ## CI-08 — API CORS breaks after frontend Cloud Run deployment
 
 **Browser error**

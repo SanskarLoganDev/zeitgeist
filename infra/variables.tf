@@ -62,3 +62,9 @@ variable "workload_identity_pool_id" {
   type        = string
   default     = "github-pool"
 }
+
+variable "workload_identity_provider_id" {
+  description = "Workload Identity Provider ID used by GitHub Actions."
+  type        = string
+  default     = "github-provider"
+}

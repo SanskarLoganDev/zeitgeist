@@ -32,3 +32,8 @@ output "managed_ssl_certificate_name" {
   description = "Google-managed SSL certificate resource name"
   value       = module.load_balancer.managed_ssl_certificate_name
 }
+
+output "workload_identity_provider_name" {
+  description = "Use this value for the GitHub Actions secret GCP_WORKLOAD_IDENTITY_PROVIDER"
+  value       = module.workload_identity.provider_name
+}

@@ -12,10 +12,6 @@ locals {
   job_image      = var.use_placeholder_image ? local.placeholder : var.job_image
 }
 
-data "google_project" "current" {
-  project_id = var.project_id
-}
-
 resource "google_service_account" "app" {
   project      = var.project_id
   account_id   = "zeitgeist-app"
@@ -90,7 +86,7 @@ resource "google_service_account_iam_member" "self_act_as" {
 resource "google_service_account_iam_member" "github_wif_user" {
   service_account_id = google_service_account.app.name
   role               = "roles/iam.workloadIdentityUser"
-  member             = "principalSet://iam.googleapis.com/projects/${data.google_project.current.number}/locations/global/workloadIdentityPools/${var.wif_pool_id}/attribute.repository/${var.github_repository}"
+  member             = "principalSet://iam.googleapis.com/${var.wif_pool_name}/attribute.repository/${var.github_repository}"
 }
 
 # ── IAM propagation delay ─────────────────────────────────────────────────────

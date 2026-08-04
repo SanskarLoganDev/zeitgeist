@@ -38,6 +38,14 @@ module "cloud_sql" {
   db_password = var.db_password
 }
 
+module "workload_identity" {
+  source      = "./modules/workload_identity"
+  project_id  = var.gcp_project_id
+  pool_id     = var.workload_identity_pool_id
+  provider_id = var.workload_identity_provider_id
+  repository  = var.github_repository
+}
+
 module "cloud_run" {
   source                = "./modules/cloud_run"
   project_id            = var.gcp_project_id
@@ -50,7 +58,7 @@ module "cloud_run" {
   allowed_hosts         = var.allowed_hosts
   cors_allowed_origins  = var.cors_allowed_origins
   github_repository     = var.github_repository
-  wif_pool_id           = var.workload_identity_pool_id
+  wif_pool_name         = module.workload_identity.pool_name
   depends_on            = [module.cloud_sql, module.artifact_registry]
 }
 
