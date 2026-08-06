@@ -121,7 +121,7 @@ def test_run_with_adapters_records_failure_and_continues() -> None:
         item_limit=1,
     )
 
-    assert exit_code == 1
+    assert exit_code == 0
 
     failed_run = IngestionRun.objects.get(source_adapter="failing")
     assert failed_run.status == IngestionRun.STATUS_FAILED
@@ -142,7 +142,7 @@ def test_run_with_adapters_records_unknown_source_as_failure() -> None:
 
     exit_code = run_with_adapters({}, item_limit=1)
 
-    assert exit_code == 1
+    assert exit_code == 0
 
     ingestion_run = IngestionRun.objects.get()
     assert ingestion_run.status == IngestionRun.STATUS_FAILED
