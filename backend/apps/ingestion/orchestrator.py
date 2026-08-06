@@ -86,7 +86,9 @@ SUMMARY_MAX_ITEMS = 5
 def run() -> int:
     """
     Main entrypoint called by run_job.py.
-    Returns 0 on success, 1 if any adapter failed (for Cloud Run Job exit code).
+    Returns 0 when the batch completes, even if individual adapters fail.
+    Source-level failures are recorded in IngestionRun and should not cause
+    Cloud Run to retry the whole job and re-call every external API.
     """
     return run_with_adapters(ADAPTER_REGISTRY)
 
@@ -99,7 +101,6 @@ def run_with_adapters(
     generate_ai_summaries: bool | None = None,
 ) -> int:
     """Run ingestion for every active category/source config."""
-    had_failure = False
     categories = Category.objects.filter(is_active=True).prefetch_related("source_configs")
     should_generate_ai_summaries = (
         settings.AI_SUMMARIES_ENABLED
@@ -114,18 +115,15 @@ def run_with_adapters(
             adapter_class = adapter_registry.get(source_config.source)
             if adapter_class is None:
                 _record_unknown_source(category, source_config.source)
-                had_failure = True
                 continue
 
             adapter = adapter_class()
-            success = _run_source_adapter(
+            _run_source_adapter(
                 adapter,
                 category=category,
                 source=source_config.source,
                 item_limit=item_limit,
             )
-            if not success:
-                had_failure = True
         if should_generate_ai_summaries:
             if category_summary_generator is None:
                 category_summary_generator = GeminiClient()
@@ -139,7 +137,7 @@ def run_with_adapters(
                     summary_generator=category_summary_generator,
                 )
 
-    return 1 if had_failure else 0
+    return 0
 
 
 def _run_source_adapter(
