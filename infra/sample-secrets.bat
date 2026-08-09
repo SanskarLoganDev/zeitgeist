@@ -21,6 +21,8 @@ echo replace-with-cloud-sql-db-password | gcloud secrets versions add db-passwor
 echo Adding source API keys...
 echo replace-with-nytimes-api-key | gcloud secrets versions add nytimes-api-key --project=%PROJECT_ID% --data-file=-
 echo replace-with-rawg-api-key | gcloud secrets versions add rawg-api-key --project=%PROJECT_ID% --data-file=-
+echo replace-with-igdb-client-id | gcloud secrets versions add igdb-client-id --project=%PROJECT_ID% --data-file=-
+echo replace-with-igdb-client-secret | gcloud secrets versions add igdb-client-secret --project=%PROJECT_ID% --data-file=-
 echo replace-with-football-data-api-key | gcloud secrets versions add football-data-api-key --project=%PROJECT_ID% --data-file=-
 echo replace-with-cricket-data-api-key | gcloud secrets versions add cricket-data-api-key --project=%PROJECT_ID% --data-file=-
 

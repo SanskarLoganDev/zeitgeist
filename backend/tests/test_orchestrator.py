@@ -4,8 +4,12 @@ from apps.ai.client import SummaryTrendItem
 from apps.categories.models import Category, CategorySourceConfig
 from apps.ingestion.adapters.base import BaseSourceAdapter, NormalizedTrendItem
 from apps.ingestion.models import IngestionRun
-from apps.ingestion.orchestrator import run_with_adapters
+from apps.ingestion.orchestrator import ADAPTER_REGISTRY, run_with_adapters
 from apps.trends.models import CategoryAISummary, TrendItem, TrendSnapshot
+
+
+def test_adapter_registry_includes_igdb() -> None:
+    assert "igdb" in ADAPTER_REGISTRY
 
 
 class SuccessfulAdapter(BaseSourceAdapter[dict[str, str]]):

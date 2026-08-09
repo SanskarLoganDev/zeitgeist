@@ -22,7 +22,7 @@ Current active categories and sources:
 |---|---|
 | Tech | Hacker News, DEV |
 | News | New York Times Most Popular |
-| Gaming | RAWG |
+| Gaming | RAWG, IGDB |
 | Sports | Football-Data, Cricket Data |
 
 Current user-facing features:
@@ -91,6 +91,8 @@ Only these Secret Manager containers are currently required:
 | `db-password` | Cloud SQL connection |
 | `nytimes-api-key` | News ingestion |
 | `rawg-api-key` | Gaming ingestion |
+| `igdb-client-id` | Gaming ingestion |
+| `igdb-client-secret` | Gaming ingestion |
 | `football-data-api-key` | Sports ingestion |
 | `cricket-data-api-key` | Sports ingestion |
 | `smtp-host` | Registration/password-reset email |

@@ -47,6 +47,7 @@ from apps.ingestion.adapters.cricket_data import CricketDataAdapter
 from apps.ingestion.adapters.devto import DevToAdapter
 from apps.ingestion.adapters.football_data import FootballDataAdapter
 from apps.ingestion.adapters.hackernews import HackerNewsAdapter
+from apps.ingestion.adapters.igdb import IgdbAdapter
 from apps.ingestion.adapters.nytimes import NYTimesMostPopularAdapter
 from apps.ingestion.adapters.rawg import RawgAdapter
 from apps.ingestion.models import IngestionRun
@@ -74,6 +75,7 @@ ADAPTER_REGISTRY: AdapterRegistry = {
     DevToAdapter.get_source_name(): DevToAdapter,
     FootballDataAdapter.get_source_name(): FootballDataAdapter,
     HackerNewsAdapter.get_source_name(): HackerNewsAdapter,
+    IgdbAdapter.get_source_name(): IgdbAdapter,
     NYTimesMostPopularAdapter.get_source_name(): NYTimesMostPopularAdapter,
     RawgAdapter.get_source_name(): RawgAdapter,
 }

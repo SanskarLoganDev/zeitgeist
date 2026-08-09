@@ -32,7 +32,7 @@ def test_seed_categories_maps_news_to_nytimes() -> None:
 
 
 @pytest.mark.django_db
-def test_seed_categories_maps_gaming_to_rawg() -> None:
+def test_seed_categories_maps_gaming_to_rawg_and_igdb() -> None:
     call_command("seed_categories")
 
     gaming = Category.objects.get(slug="gaming")
@@ -40,7 +40,10 @@ def test_seed_categories_maps_gaming_to_rawg() -> None:
         CategorySourceConfig.objects.filter(category=gaming).values_list("source", flat=True)
     )
 
-    assert sources == {CategorySourceConfig.SOURCE_RAWG}
+    assert sources == {
+        CategorySourceConfig.SOURCE_RAWG,
+        CategorySourceConfig.SOURCE_IGDB,
+    }
 
 
 @pytest.mark.django_db
