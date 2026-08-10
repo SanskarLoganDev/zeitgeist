@@ -51,7 +51,7 @@ Cloud Run Ingestion Job
   +--> Hacker News
   +--> DEV
   +--> NYT Most Popular
-  +--> RAWG
+  +--> IGDB
   +--> Football-Data
   +--> Cricket Data
   +--> Gemini via Vertex AI / Google Gen AI SDK
@@ -117,7 +117,7 @@ Registered adapters:
 - `hackernews`
 - `devto`
 - `nytimes`
-- `rawg`
+- `igdb`
 - `football_data`
 - `cricket_data`
 
@@ -153,7 +153,8 @@ Current required secret containers:
 - `django-secret-key`
 - `db-password`
 - `nytimes-api-key`
-- `rawg-api-key`
+- `igdb-client-id`
+- `igdb-client-secret`
 - `football-data-api-key`
 - `cricket-data-api-key`
 - `smtp-host`

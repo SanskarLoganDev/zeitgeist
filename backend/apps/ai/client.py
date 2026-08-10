@@ -218,8 +218,8 @@ def _source_label(source: str) -> str:
         "devto": "DEV",
         "football_data": "Football-Data",
         "hackernews": "Hacker News",
+        "igdb": "IGDB",
         "nytimes": "New York Times",
-        "rawg": "RAWG",
     }.get(source, source)
 
 

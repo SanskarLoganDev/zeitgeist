@@ -26,7 +26,7 @@ Current active source adapters:
 hackernews      -> Hacker News
 devto           -> DEV
 nytimes         -> New York Times Most Popular
-rawg            -> RAWG
+igdb            -> IGDB
 football_data   -> Football-Data
 cricket_data    -> Cricket Data
 ```
@@ -73,7 +73,7 @@ CategoryAISummary -> stored Gemini summary text generated during ingestion
 ## User Request Flow
 
 When a user opens the frontend, the frontend does not call Hacker News, DEV,
-NYT, RAWG, Football-Data, Cricket Data, or Gemini.
+NYT, IGDB, Football-Data, Cricket Data, or Gemini.
 
 The frontend calls the Django API:
 

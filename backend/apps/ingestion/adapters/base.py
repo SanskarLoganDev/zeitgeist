@@ -9,8 +9,8 @@ Purpose : Defines the BaseSourceAdapter abstract class that ALL source adapters
 
             get_source_name() -> str
               Returns the adapter's identifier string — "hackernews",
-              "devto", "nytimes", "rawg", or "football_data". This is stored in
-              TrendItem.source and IngestionRun.source_adapter.
+              "devto", "nytimes", "igdb", or "football_data". This is stored
+              in TrendItem.source and IngestionRun.source_adapter.
 
             fetch(category: Category) -> list[RawItem]
               Calls the external API for the given category.
@@ -29,7 +29,7 @@ Purpose : Defines the BaseSourceAdapter abstract class that ALL source adapters
             then decides which categories use that adapter.
 
 Used by : Every source adapter inherits from this class:
-            hackernews.py, devto.py, nytimes.py, rawg.py, football_data.py
+            hackernews.py, devto.py, nytimes.py, igdb.py, football_data.py
           apps/ingestion/orchestrator.py — calls fetch() and normalise() on each adapter
 
 Phase    : 1 — Week 2

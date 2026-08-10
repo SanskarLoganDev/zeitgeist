@@ -17,7 +17,6 @@ locals {
 
     # ── Verified source API keys ────────────────────────────────────────────
     "nytimes-api-key"       = "New York Times Most Popular API key"
-    "rawg-api-key"          = "RAWG video games API key"
     "igdb-client-id"        = "IGDB Twitch application client ID"
     "igdb-client-secret"    = "IGDB Twitch application client secret"
     "football-data-api-key" = "Football-Data API token"

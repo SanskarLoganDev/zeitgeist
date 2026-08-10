@@ -25,9 +25,6 @@ Current active categories and sources:
 | Gaming | IGDB |
 | Sports | Football-Data, Cricket Data |
 
-RAWG is retained in code and infrastructure temporarily as a rollback path, but
-it is no longer seeded as an active Gaming source.
-
 Current user-facing features:
 
 - Public dashboard and `/category/[slug]` detail pages.
@@ -93,7 +90,6 @@ These Secret Manager containers are currently provisioned:
 | `django-secret-key` | Django runtime |
 | `db-password` | Cloud SQL connection |
 | `nytimes-api-key` | News ingestion |
-| `rawg-api-key` | RAWG rollback only |
 | `igdb-client-id` | Gaming ingestion |
 | `igdb-client-secret` | Gaming ingestion |
 | `football-data-api-key` | Sports ingestion |

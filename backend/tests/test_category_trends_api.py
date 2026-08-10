@@ -83,15 +83,15 @@ def test_category_trends_can_filter_to_one_source() -> None:
 @pytest.mark.django_db
 def test_category_trends_clamps_page_to_last_real_page() -> None:
     category = Category.objects.create(name="Gaming", slug="gaming")
-    CategorySourceConfig.objects.create(category=category, source="rawg")
-    snapshot = _create_successful_snapshot(category=category, source="rawg")
+    CategorySourceConfig.objects.create(category=category, source="igdb")
+    snapshot = _create_successful_snapshot(category=category, source="igdb")
     TrendItem.objects.create(
         snapshot=snapshot,
-        source="rawg",
+        source="igdb",
         title="Hades II",
-        url="https://rawg.io/games/hades-ii",
+        url="https://www.igdb.com/games/hades-ii",
         score=1000,
-        score_label="adds",
+        score_label="trend score",
         rank=1,
     )
 

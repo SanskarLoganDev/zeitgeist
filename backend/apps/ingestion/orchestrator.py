@@ -49,7 +49,6 @@ from apps.ingestion.adapters.football_data import FootballDataAdapter
 from apps.ingestion.adapters.hackernews import HackerNewsAdapter
 from apps.ingestion.adapters.igdb import IgdbAdapter
 from apps.ingestion.adapters.nytimes import NYTimesMostPopularAdapter
-from apps.ingestion.adapters.rawg import RawgAdapter
 from apps.ingestion.models import IngestionRun
 from apps.trends.models import CategoryAISummary, TrendItem, TrendSnapshot
 
@@ -77,7 +76,6 @@ ADAPTER_REGISTRY: AdapterRegistry = {
     HackerNewsAdapter.get_source_name(): HackerNewsAdapter,
     IgdbAdapter.get_source_name(): IgdbAdapter,
     NYTimesMostPopularAdapter.get_source_name(): NYTimesMostPopularAdapter,
-    RawgAdapter.get_source_name(): RawgAdapter,
 }
 
 DEFAULT_ITEM_LIMIT = 50

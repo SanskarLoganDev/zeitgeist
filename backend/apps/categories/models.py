@@ -92,7 +92,6 @@ class CategorySourceConfig(models.Model):
     SOURCE_HACKERNEWS = "hackernews"
     SOURCE_DEVTO = "devto"
     SOURCE_NYTIMES = "nytimes"
-    SOURCE_RAWG = "rawg"
     SOURCE_IGDB = "igdb"
     SOURCE_FOOTBALL_DATA = "football_data"
     SOURCE_CRICKET_DATA = "cricket_data"
@@ -101,7 +100,6 @@ class CategorySourceConfig(models.Model):
         (SOURCE_HACKERNEWS, "Hacker News"),
         (SOURCE_DEVTO, "DEV"),
         (SOURCE_NYTIMES, "New York Times"),
-        (SOURCE_RAWG, "RAWG"),
         (SOURCE_IGDB, "IGDB"),
         (SOURCE_FOOTBALL_DATA, "Football-Data"),
         (SOURCE_CRICKET_DATA, "Cricket Data"),

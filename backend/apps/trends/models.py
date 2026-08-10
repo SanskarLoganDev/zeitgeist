@@ -83,7 +83,6 @@ class TrendItem(models.Model):
       HN        → points,              score_label="points"
       DEV       → reactions + comments, score_label="engagement"
       NYTimes   → rank-derived score,  score_label="most viewed"
-      RAWG      → user library adds,   score_label="adds"
       IGDB      → weighted PopScore,   score_label="trend score"
       Football  → match timestamp,     score_label="Full-time - 3-2"
       Cricket   → match timestamp,     score_label="India won by 4 wickets"
@@ -95,7 +94,6 @@ class TrendItem(models.Model):
     SOURCE_HACKERNEWS = "hackernews"
     SOURCE_DEVTO = "devto"
     SOURCE_NYTIMES = "nytimes"
-    SOURCE_RAWG = "rawg"
     SOURCE_IGDB = "igdb"
     SOURCE_FOOTBALL_DATA = "football_data"
     SOURCE_CRICKET_DATA = "cricket_data"
@@ -104,7 +102,6 @@ class TrendItem(models.Model):
         (SOURCE_HACKERNEWS, "Hacker News"),
         (SOURCE_DEVTO, "DEV"),
         (SOURCE_NYTIMES, "New York Times"),
-        (SOURCE_RAWG, "RAWG"),
         (SOURCE_IGDB, "IGDB"),
         (SOURCE_FOOTBALL_DATA, "Football-Data"),
         (SOURCE_CRICKET_DATA, "Cricket Data"),

@@ -6,8 +6,7 @@ const SOURCE_LABELS: Record<string, string> = {
   football_data: "Football Data",
   hackernews: "Hacker News",
   igdb: "IGDB",
-  nytimes: "New York Times",
-  rawg: "RAWG"
+  nytimes: "New York Times"
 };
 
 const SOURCE_SHORT_LABELS: Record<string, string> = {
@@ -16,8 +15,7 @@ const SOURCE_SHORT_LABELS: Record<string, string> = {
   football_data: "Football",
   hackernews: "HN",
   igdb: "IGDB",
-  nytimes: "NYT",
-  rawg: "RAWG"
+  nytimes: "NYT"
 };
 
 export function formatSource(source: string): string {
