@@ -35,10 +35,7 @@ STARTER_CATEGORIES: list[StarterCategory] = [
         "name": "Gaming",
         "slug": "gaming",
         "icon": "gaming",
-        "sources": [
-            CategorySourceConfig.SOURCE_RAWG,
-            CategorySourceConfig.SOURCE_IGDB,
-        ],
+        "sources": [CategorySourceConfig.SOURCE_IGDB],
     },
     {
         "name": "News",
