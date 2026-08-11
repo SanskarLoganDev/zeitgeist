@@ -26,8 +26,24 @@ name: CI — lint, type check, test
 on:
   push:
     branches: ["**"]
+    paths-ignore:
+      - "**/*.md"
+      - ".gitignore"
+      - "design-docs/**"
+      - "output/**"
+      - "troubleshooting/**"
+      - "infra/sample-secrets.bat"
+      - "infra/terraform.tfvars.example"
   pull_request:
     branches: [main]
+    paths-ignore:
+      - "**/*.md"
+      - ".gitignore"
+      - "design-docs/**"
+      - "output/**"
+      - "troubleshooting/**"
+      - "infra/sample-secrets.bat"
+      - "infra/terraform.tfvars.example"
 
 # Opt into Node.js 24 runtime for all JavaScript-based actions in this workflow.
 # GitHub recommends this as the correct migration path — not a workaround.

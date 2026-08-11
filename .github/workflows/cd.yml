@@ -18,6 +18,10 @@ name: CD — build, push, deploy to Cloud Run
 on:
   push:
     branches: [main]
+    paths:
+      - "backend/**"
+      - "frontend/**"
+      - ".github/workflows/cd.yml"
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
