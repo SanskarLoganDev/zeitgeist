@@ -234,8 +234,8 @@ yarn-error.log*
 .env.production.local
 
 # ── Terraform ─────────────────────────────────────────────────────────────────
+# .terraform.lock.hcl commit this file to create versioning and when other users are working on the project
 **/.terraform/
-**/.terraform.lock.hcl
 **/terraform.tfstate
 **/terraform.tfstate.backup
 **/terraform.tfvars
