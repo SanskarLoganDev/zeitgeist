@@ -13,7 +13,7 @@ infrastructure.
 
 Phase 1 and Phase 2 are complete. The app has been deployed publicly at
 `https://dailyzeitgeist.xyz` with a production HTTPS load balancer, managed TLS,
-same-origin API routing under `/api/v1`, Cloud Armor on the API backend, Cloud
+same-origin API routing under `/api/v1`, Cloud
 Run restricted ingress, scheduled ingestion, and Gemini category summaries.
 
 Current active categories and sources:
@@ -49,7 +49,7 @@ Current user-facing features:
 | Batch ingestion | Cloud Run Job triggered by Cloud Scheduler |
 | AI summaries | Vertex AI / Google Gen AI SDK with Gemini |
 | Edge routing | External HTTPS Load Balancer with managed SSL |
-| Edge protection | Cloud Armor attached to the API backend service |
+| Authentication abuse controls | Django application rate limits and OTP controls; Cloud Armor omitted for the current zero-quota project |
 | Secrets | GCP Secret Manager |
 | Images | Artifact Registry |
 | Infrastructure | Terraform |
@@ -61,7 +61,7 @@ Production request flow:
 Browser
   -> dailyzeitgeist.xyz
   -> HTTPS Load Balancer
-      -> /api/* -> Cloud Armor -> Cloud Run API
+      -> /api/* -> Cloud Run API
       -> everything else -> Cloud Run Frontend
 ```
 
@@ -75,7 +75,8 @@ Runtime ownership:
 
 - Terraform owns stable infrastructure: Cloud SQL, Cloud Run service/job shells,
   Scheduler, Artifact Registry, Secret Manager containers, IAM, load balancer,
-  Cloud Armor, and scaling.
+  and scaling. Cloud Armor is omitted from the current configuration; see T-15
+  in `troubleshooting/terraform_cicd_issues.md` for the quota failure and tradeoff.
 - GitHub Actions CD owns runtime images, migrations, seed data, and Cloud Run
   runtime environment/secret attachment.
 - Secret values are never stored in Terraform. Terraform creates secret

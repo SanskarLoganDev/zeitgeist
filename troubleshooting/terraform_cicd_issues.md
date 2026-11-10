@@ -1228,3 +1228,118 @@ public HTTP traffic. `localhost` only satisfies Django's production system
 checks.
 
 ---
+
+## T-15 — Cloud Armor policy creation blocked by zero project quota
+
+**Error**
+
+```text
+Error waiting for Creating SecurityPolicy "zeitgeist-api-armor":
+Quota 'SECURITY_POLICY_RULES' exceeded. Limit: 0.0 globally.
+metric name = compute.googleapis.com/security_policy_rules
+limit name = SECURITY-POLICY-RULES-per-project
+dimensions = map[global:global]
+```
+
+The same failure occurred when the user tried creating a basic global backend
+security policy in the Google Cloud console. Merely seeing the Create policy
+button did not establish that the project could create a policy.
+
+**Cause**
+
+Read-only project checks found limit 0 and usage 0 for `SECURITY_POLICIES`,
+`SECURITY_POLICY_RULES`, and `SECURITY_POLICY_CEVAL_RULES`. The requested
+configuration needed a global policy with two rules, one using an advanced
+match expression. This was unavailable quota, not exhausted existing capacity.
+
+The reason Google assigned these limits to this account/project was not
+established. Do not infer a universal Cloud Armor ban for free-trial accounts
+or a recent policy change. The user's previous trial deployment used Cloud
+Armor. `billingEnabled: true` does not guarantee a particular resource quota.
+
+**Fix and reasoning**
+
+The user chose to deploy without Cloud Armor and keep the current GCP-only
+architecture. In `infra/modules/load_balancer/main.tf`:
+
+1. Comment out `google_compute_security_policy.api`, including the auth throttle
+   and default allow rule, with a short explanation of the zero-quota blocker.
+2. Comment out `security_policy = google_compute_security_policy.api.id` in
+   `google_compute_backend_service.api`.
+
+The user requested retaining both sections as comments rather than deleting
+them. To re-enable Cloud Armor later, obtain usable quota, uncomment both
+sections, then review a fresh Terraform plan before applying.
+
+The load balancer, TLS certificate, static IP, serverless NEGs, API routing,
+request logs, and restricted Cloud Run ingress are retained. No Cloudflare,
+Turnstile, API Gateway, shared cache, or replacement security service is added.
+VPC firewall rules do not replace HTTP request filtering at the public load
+balancer. API Gateway or a shared cache would change the architecture;
+reCAPTCHA would require application integration and is not an equivalent WAF.
+
+The removed policy throttled `/api/v1/auth/` requests to 30 per minute per IP
+at the edge. Django's existing auth rate limits, CSRF checks, secure cookies,
+OTP expiry/attempt limits, resend cooldowns, Secret Manager, and WIF remain in
+the application/infrastructure configuration. App counters currently use local
+memory per worker/instance; client IP extraction trusts the first forwarded
+address. These limitations are unchanged, and the remaining controls are not
+equivalent to the removed edge throttle or a managed WAF. Placeholder services
+must be replaced by real application images before Django protections run.
+
+**Validation and deployment status**
+
+The user confirmed that the Terraform apply succeeded after this change.
+Read-only checks also found the new HTTPS forwarding rule on port 443.
+The infrastructure blocker is resolved. Application deployment and end-to-end
+verification remain separate: services still use placeholder images and the
+managed certificate is provisioning at the time of this follow-up.
+
+Validation after the change: `terraform fmt -check -recursive` passed,
+`terraform validate` passed, and a refreshed plan reported **4 to add, 0 to
+change, 0 to destroy**. The additions are the API backend service, HTTPS URL
+map, HTTPS proxy, and HTTPS forwarding rule. Cloud Armor is no longer in the
+plan. The user subsequently executed apply and confirmed success; the assistant
+did not execute apply.
+
+Use Windows CMD from the existing Terraform directory/state:
+
+```cmd
+cd /d E:\Coding-practice\Projects\zeitgeist\infra
+terraform fmt -check -recursive
+terraform validate
+terraform plan
+```
+
+Before this change, refresh/plan showed five additions: the blocked policy,
+API backend service, HTTPS URL map, HTTPS proxy, and HTTPS forwarding rule.
+After removal, the expected additions are the four load balancer resources;
+check a fresh plan for actual state. The already created resources should be
+reused. Do not destroy the stack, remove state, or reuse the old saved plan.
+On an environment that already has a working policy, review its planned
+detachment/deletion before applying this configuration.
+
+After reviewing the fresh plan, the user runs:
+
+```cmd
+terraform apply
+```
+
+Then finish DNS/TLS validation, populate secret versions, update GitHub Actions
+secrets, deploy actual images/migrations/seed through CD, and run ingestion.
+An infra-only push does not trigger the current CD workflow. Verify both
+`/api/v1/health/` and the database-backed `/api/v1/dashboard/` through HTTPS,
+then test authentication and email verification before marking this resolved.
+
+**Lesson and references**
+
+Verify project quota and actual creation results separately from account type,
+billing linkage, and console UI availability. Preserve partial Terraform state
+so a failed apply can be resumed after correcting the configuration. Revisit
+Cloud Armor only if usable quota becomes available and the user requests it.
+
+- [Cloud Armor quotas](https://docs.cloud.google.com/armor/quotas)
+- [Free Trial restrictions](https://docs.cloud.google.com/free/docs/free-cloud-features#during_the_free_trial)
+- [Load balancer firewall rules](https://docs.cloud.google.com/load-balancing/docs/https#firewall_rules)
+
+---

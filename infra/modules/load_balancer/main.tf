@@ -2,6 +2,8 @@
 # Public HTTPS load balancer for dailyzeitgeist.xyz.
 # Cloud Run ingress is set to internal-and-cloud-load-balancing on both services.
 # Direct run.app access is blocked — all public traffic flows through this LB.
+# Cloud Armor is commented out because this project's security policy quotas are zero.
+# See troubleshooting/terraform_cicd_issues.md, T-15, for the decision and limits.
 
 locals {
   name_prefix = "zeitgeist"
@@ -43,55 +45,58 @@ resource "google_compute_region_network_endpoint_group" "frontend" {
   }
 }
 
-resource "google_compute_security_policy" "api" {
-  project     = var.project_id
-  name        = "${local.name_prefix}-api-armor"
-  description = "Edge protection for Zeitgeist API auth endpoints"
-
-  rule {
-    action      = "throttle"
-    priority    = 1000
-    description = "Throttle auth endpoint bursts by client IP"
-
-    match {
-      expr {
-        expression = "request.path.lower().urlDecode().startsWith('/api/v1/auth/')"
-      }
-    }
-
-    rate_limit_options {
-      conform_action = "allow"
-      exceed_action  = "deny(429)"
-      enforce_on_key = "IP"
-
-      rate_limit_threshold {
-        count        = 30
-        interval_sec = 60
-      }
-    }
-  }
-
-  rule {
-    action      = "allow"
-    priority    = 2147483647
-    description = "Default allow"
-
-    match {
-      versioned_expr = "SRC_IPS_V1"
-
-      config {
-        src_ip_ranges = ["*"]
-      }
-    }
-  }
-}
+# Disabled: policy/rule quota is zero, blocking deployment (see T-15).
+# When usable quota is available, uncomment this policy AND its backend attachment.
+# resource "google_compute_security_policy" "api" {
+#   project     = var.project_id
+#   name        = "${local.name_prefix}-api-armor"
+#   description = "Edge protection for Zeitgeist API auth endpoints"
+#
+#   rule {
+#     action      = "throttle"
+#     priority    = 1000
+#     description = "Throttle auth endpoint bursts by client IP"
+#
+#     match {
+#       expr {
+#         expression = "request.path.lower().urlDecode().startsWith('/api/v1/auth/')"
+#       }
+#     }
+#
+#     rate_limit_options {
+#       conform_action = "allow"
+#       exceed_action  = "deny(429)"
+#       enforce_on_key = "IP"
+#
+#       rate_limit_threshold {
+#         count        = 30
+#         interval_sec = 60
+#       }
+#     }
+#   }
+#
+#   rule {
+#     action      = "allow"
+#     priority    = 2147483647
+#     description = "Default allow"
+#
+#     match {
+#       versioned_expr = "SRC_IPS_V1"
+#
+#       config {
+#         src_ip_ranges = ["*"]
+#       }
+#     }
+#   }
+# }
 
 resource "google_compute_backend_service" "api" {
   project               = var.project_id
   name                  = "${local.name_prefix}-api-backend"
   load_balancing_scheme = "EXTERNAL_MANAGED"
   protocol              = "HTTP"
-  security_policy       = google_compute_security_policy.api.id
+  # Disabled with the policy above until Cloud Armor quota is available.
+  # security_policy = google_compute_security_policy.api.id
 
   backend {
     group = google_compute_region_network_endpoint_group.api.id

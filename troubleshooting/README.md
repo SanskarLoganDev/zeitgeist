@@ -9,10 +9,24 @@ secret values, Terraform state, `.env` contents, or local secret scripts.
 
 | File | Contents |
 |---|---|
-| `terraform_cicd_issues.md` | Terraform, Cloud Run, Cloud SQL, Secret Manager, load balancer, CORS, auth, frontend hydration, and GitHub Actions issues. |
+| `terraform_cicd_issues.md` | Terraform, Cloud Run, Cloud SQL, Secret Manager, load balancer, CORS, auth, frontend hydration, and GitHub Actions issues. Includes T-15: Cloud Armor zero-quota failure and deployment without Cloud Armor. |
 | `workflow.md` | Plain-English ingestion and request flow reference. |
 
 ## How To Use This Folder
+
+For `Quota 'SECURITY_POLICY_RULES' exceeded. Limit: 0.0 globally`, see T-15 in
+`terraform_cicd_issues.md`. Creation failed through both Terraform and the
+console. The chosen configuration comments out the Cloud Armor policy and its
+API backend attachment to finish deployment using the existing GCP architecture.
+No third-party service, gateway, cache, or replacement WAF is added. The edge
+auth throttle is lost; existing application protections remain. The user has
+confirmed that Terraform apply succeeded, resolving this infrastructure blocker.
+
+The configuration change passes formatting and validation. The verified plan
+is **4 to add, 0 to change, 0 to destroy**, completing the API backend and HTTPS
+routing without a Cloud Armor policy. Subsequent live checks found the HTTPS
+forwarding rule. Actual application deployment and website verification remain
+pending; this is not yet confirmation of a working public dashboard.
 
 When you hit an error:
 
